@@ -36,7 +36,7 @@ start(Host, Opts) ->
 stop(_Host) ->
     supervisor:terminate_child(ejabberd_sup, ?SUP),
     supervisor:delete_child(ejabberd_sup, ?SUP),
-    mnesia:transaction(fun() -> mnesia:delete_table(?SPT),
+    {atomic, _} = mnesia:transaction(fun() -> mnesia:delete_table(?SPT),
 				mnesia:delete_table(?PST) end),
     inets:stop(httpc, ?INETS),
     ?INFO_MSG("mod_prisma_aggregator stopped", []),
