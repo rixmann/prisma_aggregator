@@ -2,12 +2,14 @@
 
 -behaviour(supervisor).
 
--include("prisma_aggregator.hrl").
+
 
 -compile(export_all).
 -export([init/1]).
 
 -define(CONNECTOR, aggregator_connector).
+
+-include("prisma_aggregator.hrl").
 
 %% supervisor implementation
 init([_Host, _Opts]) ->

@@ -8,4 +8,5 @@
 
 -record(process_mapping, {key, pid}).
 
--record(subscription, {id, url = "", sender = "", receiver = ""}).
+-record(subscription, {id, url = "", sender = "", receiver = "", last_msg_key = ""}).
+

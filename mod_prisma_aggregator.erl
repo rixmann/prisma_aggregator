@@ -26,19 +26,24 @@ start(Host, Opts) ->
                  [?MODULE]}, %TODO add ?SUP
     supervisor:start_child(ejabberd_sup, ChildSpec),
     ?INFO_MSG("mod_prisma_aggregator starting!, module: ~p~n", [?MODULE]),
-
-    % add a new virtual host / subdomain "echo".example.com
+    F = fun() -> mnesia:all_keys(?PST) end,
+    {atomic, Entries} = mnesia:transaction(F),
+    lists:map(fun(El) ->
+		      aggregator_connector:start_worker(El)
+	      end, Entries),
+    log("read PST~n~p", [Entries]),
+% add a new virtual host / subdomain "echo".example.com
     MyHost = gen_mod:get_opt_host(Host, Opts, "aggregator.@HOST@"),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
-
+    
    ok.
 
 stop(_Host) ->
     supervisor:terminate_child(ejabberd_sup, ?SUP),
     supervisor:delete_child(ejabberd_sup, ?SUP),
-    mnesia:transaction(fun() -> mnesia:delete_table(?SPT),
-				mnesia:delete_table(?PST) end),
+    {atomic, ok} = mnesia:delete_table(?SPT),
     inets:stop(httpc, ?INETS),
+    inets:stop(),
     ?INFO_MSG("mod_prisma_aggregator stopped", []),
     ok.
 
@@ -76,6 +81,8 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
     case xml:get_subtag_cdata(Packet, "body") of
 	"" -> ok;
 	"stop " ++ Id -> ?CONNECTOR:stop(Id),
+			 ok;
+	"collapse " ++ Id -> ?CONNECTOR:collapse(Id),
 			 ok;
 	"new_subscription " ++ Params ->
 	    {match, [Url, Id]} = re:run(Params, "(?<Id>.*) (?<Url>.*)", [{capture,['Url', 'Id'], list}]),
@@ -127,7 +134,8 @@ send_message(From, To, TypeStr, BodyStr) ->
 
 setup_mnesia() ->
     setup_mnesia(?SPT, fun() -> mnesia:create_table(?SPT, [{attributes, record_info(fields, process_mapping)}]) end),
-    setup_mnesia(?PST, fun() ->mnesia:create_table(?PST, [{attributes, record_info(fields, subscription)}]) end).
+    setup_mnesia(?PST, fun() ->mnesia:create_table(?PST, [{attributes, record_info(fields, subscription)},
+							  {disc_copies, [node()]}]) end).
 
 setup_mnesia(Name, Fun) ->
     try 
@@ -138,3 +146,6 @@ setup_mnesia(Name, Fun) ->
 	    Fun();
 	  Type : Error -> ?INFO_MSG("In setup_mnesia, caught unknown msg:~n~p ->~n~p~n", [Type, Error])
     end.
+
+log(Msg, Vars) ->
+    ?INFO_MSG(Msg, Vars).
