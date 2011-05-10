@@ -84,6 +84,8 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 			 ok;
 	"collapse " ++ Id -> ?CONNECTOR:collapse(Id),
 			 ok;
+	"stop_all_and_delete_mnesia" -> ?CONNECTOR:stop_all_and_delete_mnesia(),
+					ok;
 	"new_subscription " ++ Params ->
 	    {match, [Url, Id]} = re:run(Params, "(?<Id>.*) (?<Url>.*)", [{capture,['Url', 'Id'], list}]),
 	    ?CONNECTOR:new_subscription(From, To, #subscription{id = Id, url = Url}),
