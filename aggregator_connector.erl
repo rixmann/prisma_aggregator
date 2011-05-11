@@ -13,7 +13,7 @@
 
 %% API
 -export([start_link/1, stop/1, collapse/1, new_subscription/3, 
-	 start_worker/1, stop_all_and_delete_mnesia/0]).
+	 start_worker/1, stop_all_and_delete_mnesia/0, rebind_all/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -62,6 +62,10 @@ stop_all_and_delete_mnesia() ->
     {atomic, ok} = mnesia:delete_table(?PST),
     {atomic, ok} = mnesia:delete_table(?SPT).
 
+rebind_all(From, To) ->
+    Ids = mnesia:dirty_all_keys(?PST),
+    lists:map(fun(Id) -> rebind(From, To, Id) end, Ids).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -92,6 +96,10 @@ handle_call(_Request, _From, State) ->
     Reply = ignored,
     log("Ignored call~n~p", [{_Request, _From, State}]),
     {reply, Reply, State}.
+
+handle_cast({rebind, {From, To}}, State = #state{subscription=Sub}) ->
+    Nsub = Sub#subscription{sender = From, receiver = To},
+    {noreply, State#state{subscription=Nsub}};
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
@@ -201,7 +209,7 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
     Sub = State#state.subscription,
     case xml_stream:parse_element(binary_to_list(Body)) of
 	{error, {_, Reason}} -> 
-	    log("Error while parsing xml: ~n~p", [Reason]),
+	    log("Error while parsing xml in worker ~p: ~p", [get_id(State), Reason]),
 	    %reply("Error, the stream " ++ get_id(State)  ++ " returns bad xml.", State),
 	    callbacktimer(60000, go_get_messages),
 	    {noreply, State};
@@ -223,7 +231,7 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
 			   true -> %log("Checked messages for ~p, no news.", [get_id(State)]),
 				   Sub
 		       end,
-		callbacktimer(30000, go_get_messages),
+		callbacktimer(10000, go_get_messages),
 		{noreply, State#state{subscription = NSub}}
 	    catch
 		_ : Error -> log("Caught error while trying to interpret xml.~n~p", [Error]),
@@ -282,3 +290,11 @@ reply(Msg, Sub) ->
 				       Msg).
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
+
+rebind(From, To, Id) ->
+    case get_pid_from_id(Id) of
+	not_found ->
+	    not_found;
+	Pid -> gen_server:cast(Pid, {rebind, {From, To}})
+    end.
+    

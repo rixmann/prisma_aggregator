@@ -1,21 +1,25 @@
-heise http://www.heise.de/newsticker/heise.rdf
+new_subscription heise http://www.heise.de/newsticker/heise.rdf
 
-tagesschau http://www.tagesschau.de/xml/rss2
+new_subscription tagesschau http://www.tagesschau.de/xml/rss2
 
-google-headlines http://news.google.com/news?ned=us&topic=h&output=rss
+new_subscription google-headlines http://news.google.com/news?ned=us&topic=h&output=rss
 
-google-international http://news.google.com/news?ned=us&topic=w&output=rss
+new_subscription google-international http://news.google.com/news?ned=us&topic=w&output=rss
 
-google-australien http://news.google.com/news?ned=au&topic=n&output=rss
+new_subscription google-australien http://news.google.com/news?ned=au&topic=n&output=rss
 
-google-kanada http://news.google.com/news?ned=ca&topic=n&output=rss
+new_subscription google-kanada http://news.google.com/news?ned=ca&topic=n&output=rss
 
-google-GB http://news.google.com/news?ned=uk&topic=n&output=rss
+new_subscription google-GB http://news.google.com/news?ned=uk&topic=n&output=rss
 
-google-wissen http://news.google.com/news?ned=us&topic=t&output=rss
+new_subscription google-wissen http://news.google.com/news?ned=us&topic=t&output=rss
 
-google-gesundheit http://news.google.com/news?ned=us&topic=m&output=rss
+new_subscription google-gesundheit http://news.google.com/news?ned=us&topic=m&output=rss
 
-bild http://rss.bild.de/bild.xml
+new_subscription bild http://rss.bild.de/bild.xml
 
-faz-wissen http://www.faz.net/s/Rub7F4BEE0E0C39429A8565089709B70C44/Tpl~Epartner~SRss_.xml
+new_subscription faz-wissen http://www.faz.net/s/Rub7F4BEE0E0C39429A8565089709B70C44/Tpl~Epartner~SRss_.xml
+
+new_subscription babel-bulletin http://www.heise.de/developer/rss/babel-bulletin/blog.rdf
+
+new_subscription dotnet-doktor http://www.heise.de/developer/rss/dotnet-doktor/blog.rdf
