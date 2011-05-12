@@ -99,6 +99,7 @@ handle_call(_Request, _From, State) ->
 
 handle_cast({rebind, {From, To}}, State = #state{subscription=Sub}) ->
     Nsub = Sub#subscription{sender = From, receiver = To},
+    %TODO rebind in die datenbank
     {noreply, State#state{subscription=Nsub}};
 
 handle_cast(go_get_messages, State) ->
