@@ -295,11 +295,8 @@ rebind(From, To, Id) ->
     end.
     
 store_to_couch(Doclist ,State) ->
-    log("vor doclist_to_json", []),
     Pre = doclist_to_json(Doclist),
-    log("vor json_eep call", []),
     Jstring = json_eep:term_to_json({[{<<"docs">>, Pre}]}), 
-    log("vor http:request", []),
     {ok, RequestId} = http:request(post,
 				   {"http://localhost:5984/prisma_docs/_bulk_docs", 
 				    [], 
@@ -307,7 +304,6 @@ store_to_couch(Doclist ,State) ->
 				    Jstring},
 				   [], 
 				   [{sync, false}]),
-    log("nach http:request", []),
     true = ets:insert(get_callbacks(State), {RequestId, {couch_doc_store_reply, Doclist}}),
     ok.
 
