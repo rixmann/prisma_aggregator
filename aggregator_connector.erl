@@ -8,7 +8,7 @@
 -module(aggregator_connector).
 
 -behaviour(gen_server).
-
+-define(POLLTIME, 5000).
 
 
 %% API
@@ -99,21 +99,13 @@ handle_call(_Request, _From, State) ->
 
 handle_cast({rebind, {From, To}}, State = #state{subscription=Sub}) ->
     Nsub = Sub#subscription{sender = From, receiver = To},
-    %TODO rebind in die datenbank
+    ok = mnesia:dirty_write(?PST, Nsub),
     {noreply, State#state{subscription=Nsub}};
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
     {ok, RequestId} = http:request(get, {Sub#subscription.url, []}, [], [{sync, false}]),
-    ets:insert(get_callbacks(State), {RequestId, initial_get_stream}),
-    {noreply, State};
-
-handle_cast({get_feed, From, To, Url}, State) ->
-    {ok, {_, _Headers, Body}} = http:request(Url, ?INETS),
-    Xml = xml_stream:parse_element(Body),
-    Content = parse_rss(Xml),
-    log("received xml stream, Url: ~n~p~nStream:~n~p~n", [Url, Content]),
-    mod_prisma_aggregator:echo(To, From,  "feed abgerufen"),
+    true = ets:insert(get_callbacks(State), {RequestId, initial_get_stream}),
     {noreply, State};
 
 handle_cast(stop, State) ->
@@ -167,10 +159,8 @@ get_pid_from_id(Id) ->
 
 parse_rss(Xml) ->
     try
-%	log("Xml : ~n~p", [Xml]),
 	Channel = xml:get_path_s(Xml, [{elem, "channel"}]),
 	{xmlelement, _, _, Rss09items} = Xml,
-%	log("Channel: ~n~p", [Channel]),
 	{xmlelement, "channel", _, ChannelBody} = Channel,
 	Items = [E || E = {xmlelement, "item", _, _} <- ChannelBody] ++
 	    [E || E = {xmlelement, "item", _, _} <- Rss09items],
@@ -209,10 +199,10 @@ get_id_from_subscription_or_id(Id) ->
 handle_http_response(initial_get_stream, {_,_, Body}, State) -> 
     Sub = State#state.subscription,
     case xml_stream:parse_element(binary_to_list(Body)) of
-	{error, {_, Reason}} -> 
-	    log("Error while parsing xml in worker ~p: ~p", [get_id(State), Reason]),
+	{error, {_, _Reason}} -> 
+	    %log("Error while parsing xml in worker ~p: ~p", [get_id(State), Reason]),
 	    %reply("Error, the stream " ++ get_id(State)  ++ " returns bad xml.", State),
-	    callbacktimer(60000, go_get_messages),
+	    callbacktimer(?POLLTIME, go_get_messages),
 	    {noreply, State};
 	Xml ->
 	    try
@@ -225,25 +215,30 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
 							      end, 
 							      NewContent)),
 			       reply("Neue Nachrichten von " ++ get_id(State) ++ " ->\n" ++ Text, State),
+
+			       ok = store_to_couch(NewContent, State),
 			       StoreSub = Sub#subscription{last_msg_key = merge_keys(Content, Sub#subscription.last_msg_key)},
-			       mnesia:dirty_write(?PST, StoreSub),
+			       ok = mnesia:dirty_write(StoreSub),
 			       StoreSub;
 			   
-			   true -> %log("Checked messages for ~p, no news.", [get_id(State)]),
-				   Sub
+			   true -> Sub
 		       end,
-		callbacktimer(10000, go_get_messages),
+		callbacktimer(?POLLTIME, go_get_messages),
 		{noreply, State#state{subscription = NSub}}
 	    catch
-		_ : Error -> log("Caught error while trying to interpret xml.~n~p", [Error]),
-			     callbacktimer(300000, go_get_messages),
+		_Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
+			     callbacktimer(?POLLTIME, go_get_messages),
 			     {noreply, State}
 	    end
     end;
 
+handle_http_response({couch_doc_store_reply, _Doclist}, {_,_, Body}, State) ->
+    log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), Body]),
+    {noreply, State};
+
 handle_http_response(_, {error, _Reason}, State) ->
     log("Worker ~p received an polling error: ~n~p", [get_id(State), _Reason]),
-    callbacktimer(600000, go_get_messages),
+    callbacktimer(?POLLTIME, go_get_messages),
     {noreply,State}.
 
 extract_new_messages(Content, #subscription{last_msg_key = KnownKeys}) ->
@@ -299,3 +294,28 @@ rebind(From, To, Id) ->
 	Pid -> gen_server:cast(Pid, {rebind, {From, To}})
     end.
     
+store_to_couch(Doclist ,State) ->
+    Pre = doclist_to_json(Doclist),
+    Jstring = json_eep:term_to_json({[{<<"docs">>, Pre}]}), 
+    {ok, RequestId} = http:request(post,
+				   {"http://localhost:5984/prisma_docs/_bulk_docs", 
+				    [], 
+				    "application/json", 
+				    Jstring},
+				   [], 
+				   [{sync, false}]),
+    true = ets:insert(get_callbacks(State), {RequestId, {couch_doc_store_reply, Doclist}}),
+    ok.
+
+doclist_to_json(Doclist) ->
+    lists:map(fun(Item) -> 
+		      {lists:map(fun({K, V}) ->
+					  Validv = case V of 
+						       {} -> <<"">>;
+						       _ -> list_to_binary(V)
+						   end,
+					  {list_to_binary(atom_to_list(K)), Validv} 
+				  end,
+				  Item)}
+	      end, 
+	      Doclist).
