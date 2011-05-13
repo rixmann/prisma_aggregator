@@ -215,8 +215,12 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
 							      end, 
 							      NewContent)),
 			       reply("Neue Nachrichten von " ++ get_id(State) ++ " ->\n" ++ Text, State),
-
-			       ok = store_to_couch(NewContent, State),
+			       EnrichedContent = lists:map(fun([H|T]) ->
+								   [{subId, get_id(Sub)},
+								    {date, get_date_string()},
+								    H | T]
+							   end, NewContent),
+			       ok = store_to_couch(EnrichedContent, State),
 			       StoreSub = Sub#subscription{last_msg_key = merge_keys(Content, Sub#subscription.last_msg_key)},
 			       ok = mnesia:dirty_write(StoreSub),
 			       StoreSub;
@@ -319,3 +323,8 @@ doclist_to_json(Doclist) ->
 				  Item)}
 	      end, 
 	      Doclist).
+
+get_date_string() -> 
+    {{Y, M, D}, {H, Min, S}} = erlang:localtime(), 
+    F = fun(El) -> integer_to_list(El) end, 
+    F(Y) ++ "-" ++ F(M) ++ "-" ++ F(D) ++ "-"++	F(H) ++ "-" ++ F(Min) ++ "-" ++ F(S).
