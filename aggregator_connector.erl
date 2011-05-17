@@ -85,9 +85,9 @@ init([SubOrId]) ->
 		 end
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
-    {ok, RequestId} = http:request(get, {Subscription#subscription.url, []}, [], [{sync, false}]),
+    {ibrowse_req_id, RequestId} = ibrowse:send_req(Subscription#subscription.url, [], get, [], [{stream_to, self()}], 10000),
     Callbacks = ets:new(callbacks, []),
-    true = ets:insert(Callbacks, {RequestId, initial_get_stream}),
+    true = ets:insert(Callbacks, {RequestId, {initial_get_stream, []}}),
     {ok, #state{subscription = Subscription,
 		callbacks = Callbacks}}.
 
@@ -103,8 +103,8 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
-    {ok, RequestId} = http:request(get, {Sub#subscription.url, []}, [], [{sync, false}]),
-    true = ets:insert(get_callbacks(State), {RequestId, initial_get_stream}),
+    {ibrowse_req_id, RequestId} = ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], 10000),
+    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}}),
     {noreply, State};
 
 handle_cast(stop, State) ->
@@ -117,17 +117,27 @@ handle_cast(_Msg, State) ->
     log("ignored cast~n~p", [{_Msg, State}]),
     {noreply, State}.
 
-handle_info({http, {RequestId, Resp}} , State) ->
-    [{_, Hook}] = ets:lookup(get_callbacks(State), RequestId),
-    ets:delete(get_callbacks(State), RequestId),
-    handle_http_response(Hook, Resp, State);
+handle_info({ibrowse_async_headers, _ReqId, _, _}, State) ->
+    {noreply, State};
+
+handle_info({ibrowse_async_response, ReqId, Content}, State) ->
+    [{ReqId, {Hook, List}}] = ets:lookup(get_callbacks(State), ReqId),
+    ets:insert(get_callbacks(State), {ReqId, {Hook, [Content | List]}}),
+    {noreply, State};
+   
+	
+handle_info({ibrowse_async_response_end, ReqId} , State) ->
+    [{_, {Hook, List}}] = ets:lookup(get_callbacks(State), ReqId),
+    Content = lists:flatten(lists:reverse(List)),
+    ets:delete(get_callbacks(State), ReqId),
+    handle_http_response(Hook, Content, State);
 
 handle_info({'EXIT', _Reason, normal}, State) ->
     %log("on worker ~p, process stopped with Reason ~n~p", [get_id(State), Reason]),
     {noreply, State};
 
 handle_info(Info, State) ->
-    log("ignored message: ~n~p", [{Info, State}]),
+    log("ignored info: ~n~p", [{Info, State}]),
     {noreply, State}.
 
 
@@ -220,9 +230,9 @@ get_id_from_subscription_or_id(#subscription{id = Id}) ->
 get_id_from_subscription_or_id(Id) ->
     Id.
 
-handle_http_response(initial_get_stream, {_,_, Body}, State) -> 
+handle_http_response(initial_get_stream, Body, State) -> 
     Sub = State#state.subscription,
-    case xml_stream:parse_element(binary_to_list(Body)) of
+    case xml_stream:parse_element(Body) of
 	{error, {_, _Reason}} -> 
 	    %log("Error while parsing xml in worker ~p: ~p", [get_id(State), Reason]),
 	    %reply("Error, the stream " ++ get_id(State)  ++ " returns bad xml.", State),
@@ -264,7 +274,7 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
 	    end
     end;
 
-handle_http_response({couch_doc_store_reply, _Doclist}, {_,_, _Body}, State) ->
+handle_http_response({couch_doc_store_reply, _Doclist}, _Body, State) ->
     %log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), _Body]),
     {noreply, State};
 
@@ -329,14 +339,13 @@ rebind( To, Id) ->
 store_to_couch(Doclist ,State) ->
     Pre = doclist_to_json(Doclist),
     Jstring = json_eep:term_to_json({[{<<"docs">>, Pre}]}), 
-    {ok, RequestId} = http:request(post,
-				   {"http://localhost:5984/prisma_docs/_bulk_docs", 
-				    [], 
-				    "application/json", 
-				    Jstring},
-				   [], 
-				   [{sync, false}]),
-    true = ets:insert(get_callbacks(State), {RequestId, {couch_doc_store_reply, Doclist}}),
+    {ibrowse_req_id, RequestId} = ibrowse:send_req("http://localhost:5984/prisma_docs/_bulk_docs", 
+						   [{"Content-Type", "application/json"}], 
+						   post, 
+						   Jstring,
+						   [{stream_to, self()}], 
+						   10000),
+    true = ets:insert(get_callbacks(State), {RequestId, {{couch_doc_store_reply, Doclist}, []}}),
     ok.
 
 doclist_to_json(Doclist) ->

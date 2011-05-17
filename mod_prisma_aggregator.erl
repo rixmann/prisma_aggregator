@@ -16,9 +16,7 @@
 start(Host, Opts) ->
     ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?CFG,{host, Host}),
-    inets:start(),
-    Inets = inets:start(httpc, [{profile, ?INETS}]),
-    ?INFO_MSG("inets started: ~p~n", [Inets]),
+    ibrowse:start(),
     setup_mnesia(),
     %Proc = gen_mod:get_module_proc(Host, ?MODULE),
     ChildSpec = {?SUP,
