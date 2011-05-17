@@ -6,6 +6,7 @@
 -include("jlib.hrl").
 
 -define(CONNECTOR, aggregator_connector).
+-define(CFG, aggregator_config).
 
 -compile(export_all).
 
@@ -13,6 +14,8 @@
 
 %% gen_mod implementation
 start(Host, Opts) ->
+    ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
+    ets:insert(?CFG,{host, Host}),
     inets:start(),
     Inets = inets:start(httpc, [{profile, ?INETS}]),
     ?INFO_MSG("inets started: ~p~n", [Inets]),
@@ -86,7 +89,7 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 			 ok;
 	"stop_all_and_delete_mnesia" -> ?CONNECTOR:stop_all_and_delete_mnesia(),
 					ok;
-	"rebind_all" -> ?CONNECTOR:rebind_all(From, To),
+	"rebind_all" -> ?CONNECTOR:rebind_all(To),
 			ok;
 	"new_subscription " ++ Params ->
 	    {match, [Url, Id, Feed]} = re:run(Params, "(?<Id>.+) (?<Url>.+) (?<Feed>.+)", [{capture,['Url', 'Id', 'Feed'], list}]),
@@ -100,7 +103,7 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		_ ->
 		    case json_eep:json_to_term(strip_bom(Body)) of
 			{error, _Reason} -> ?INFO_MSG("received unhandled xmpp message:~n~p~nparsing error:~n~p", [strip_bom(Body), _Reason]);
-			Json -> handle_json_msg(Json, From, To),
+			Json -> handle_json_msg(Json, From),
 				?INFO_MSG("parsed json:~n~p", [Json])
 		    end
 	    end
@@ -158,11 +161,12 @@ setup_mnesia(Name, Fun) ->
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
-handle_json_msg(Proplist, From, To) ->
+handle_json_msg(Proplist, _From) ->
     case json_get_value(<<"class">>, Proplist) of
 	undefined -> log("received xmpp-json-message that has no class attribute~n~p", [Proplist]);
 	<<"de.prisma.datamodel.subscription.Subscription">> ->
 	    SubscriptionId = json_get_value(<<"subscriptionID">>, Proplist),
+	    Accessor = json_get_value(<<"accessor">>, Proplist),
 	    SourceSpec = json_get_value(<<"sourceSpecification">>, Proplist),
 	    SourceType = json_get_value(<<"sourceType">>,  SourceSpec),
 	    AccessParameters = json_get_value([<<"accessProtocol">>, <<"accessParameters">>], SourceSpec),
@@ -174,7 +178,11 @@ handle_json_msg(Proplist, From, To) ->
 			end
 		end,
 	    Url = lists:flatten(lists:map(F, AccessParameters)),
-	    ?CONNECTOR:new_subscription(From, To, #subscription{id = binary_to_list(SubscriptionId), url = Url, source_type = binary_to_list(SourceType)}),
+	    ?CONNECTOR:new_subscription(#subscription{id = binary_to_list(SubscriptionId), 
+						      url = Url, 
+						      source_type = binary_to_list(SourceType), 
+						      accessor = jlib:string_to_jid(binary_to_list(Accessor)),
+						      host = jlib:string_to_jid("aggregator." ++ get_host())}),
 	    ok;
 	_ -> not_handled	    
     end.
@@ -184,3 +192,7 @@ json_get_value([H|T], JsonObj) ->
 json_get_value([],JsonObj) -> JsonObj;
 json_get_value(Key, {JsonObj}) ->
     proplists:get_value(Key, JsonObj).
+
+get_host() ->
+    [{host, Ret}] = ets:lookup(?CFG, host),
+    Ret.

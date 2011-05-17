@@ -12,8 +12,8 @@
 
 
 %% API
--export([start_link/1, stop/1, collapse/1, new_subscription/3, 
-	 start_worker/1, stop_all_and_delete_mnesia/0, rebind_all/2]).
+-export([start_link/1, stop/1, collapse/1, new_subscription/1, 
+	 start_worker/1, stop_all_and_delete_mnesia/0, rebind_all/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -29,14 +29,13 @@
 %% API
 %%====================================================================
 
-new_subscription(From, To, Sub = #subscription{}) ->
-    NewSub = Sub#subscription{sender=From, receiver=To},
-    Id = get_id(NewSub),
+new_subscription(Sub = #subscription{}) ->
+    Id = get_id(Sub),
     F = fun() -> mnesia:read(?PST, Id) end,
     case mnesia:transaction(F) of
-	{atomic, [Entry]} -> reply("The Stream " ++ Id ++ " is already being polled.", NewSub),
+	{atomic, [Entry]} -> reply("The Stream " ++ Id ++ " is already being polled.", Sub),
 			     Entry;
-	_ -> supervisor:start_child(?SUP, [NewSub])
+	_ -> supervisor:start_child(?SUP, [Sub])
     end.
 
 start_worker(Id) ->
@@ -62,9 +61,9 @@ stop_all_and_delete_mnesia() ->
     {atomic, ok} = mnesia:delete_table(?PST),
     {atomic, ok} = mnesia:delete_table(?SPT).
 
-rebind_all(From, To) ->
+rebind_all(To) ->
     Ids = mnesia:dirty_all_keys(?PST),
-    lists:map(fun(Id) -> rebind(From, To, Id) end, Ids).
+    lists:map(fun(Id) -> rebind(To, Id) end, Ids).
 
 %%====================================================================
 %% gen_server callbacks
@@ -97,8 +96,8 @@ handle_call(_Request, _From, State) ->
     log("Ignored call~n~p", [{_Request, _From, State}]),
     {reply, Reply, State}.
 
-handle_cast({rebind, {From, To}}, State = #state{subscription=Sub}) ->
-    Nsub = Sub#subscription{sender = From, receiver = To},
+handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
+    Nsub = Sub#subscription{accessor = To},
     ok = mnesia:dirty_write(?PST, Nsub),
     {noreply, State#state{subscription=Nsub}};
 
@@ -234,7 +233,7 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
 		Content = case Sub#subscription.source_type of
 			      "RSS" -> parse_rss(Xml);
 			      "ATOM" -> parse_atom(Xml);
-			      Val -> parse_rss(Xml)
+			      _ -> parse_rss(Xml)
 			  end,
 		NewContent = extract_new_messages(Content, Sub),
 		NSub = if
@@ -265,8 +264,8 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
 	    end
     end;
 
-handle_http_response({couch_doc_store_reply, _Doclist}, {_,_, Body}, State) ->
-    %log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), Body]),
+handle_http_response({couch_doc_store_reply, _Doclist}, {_,_, _Body}, State) ->
+    %log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), _Body]),
     {noreply, State};
 
 handle_http_response(_, {error, _Reason}, State) ->
@@ -313,18 +312,18 @@ get_callbacks(State) ->
 reply(Msg, #state{subscription = Sub}) ->
     reply(Msg, Sub);
 reply(Msg, Sub) ->
-    mod_prisma_aggregator:send_message(Sub#subscription.receiver,
-				       Sub#subscription.sender,
+    mod_prisma_aggregator:send_message(Sub#subscription.host,
+				       Sub#subscription.accessor,
 				       "chat",
 				       Msg).
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
-rebind(From, To, Id) ->
+rebind( To, Id) ->
     case get_pid_from_id(Id) of
 	not_found ->
 	    not_found;
-	Pid -> gen_server:cast(Pid, {rebind, {From, To}})
+	Pid -> gen_server:cast(Pid, {rebind, To})
     end.
     
 store_to_couch(Doclist ,State) ->
