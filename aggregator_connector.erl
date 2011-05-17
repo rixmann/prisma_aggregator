@@ -8,7 +8,7 @@
 -module(aggregator_connector).
 
 -behaviour(gen_server).
--define(POLLTIME, 5000).
+-define(POLLTIME, 60000).
 
 
 %% API
