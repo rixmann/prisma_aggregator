@@ -57,7 +57,7 @@ route(_From, To, {xmlelement, "message", _, _} = Packet) ->
 	    {match, [Id, Accessor, Url, Feed, Count]} = re:run(Params, "(?<Id>.+) (?<Accessor>.+) (?<Url>.+) (?<Feed>.+) (?<Count>.+)", [{capture,['Id', 'Accessor', 'Url', 'Feed', 'Count'], list}]),
 	    lists:map(fun(IdNum) -> 
 			      send_message(To, 
-					   jlib:string_to_jid("aggregator.kiiiiste"),
+					   jlib:string_to_jid("aggregator." ++ get_host()),
 					   "chat",
 					   create_json_subscription(Url, Accessor, Feed, Id ++ "-" ++ integer_to_list(IdNum)))
 		      end,
