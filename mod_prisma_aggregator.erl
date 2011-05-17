@@ -89,8 +89,8 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 	"rebind_all" -> ?CONNECTOR:rebind_all(From, To),
 			ok;
 	"new_subscription " ++ Params ->
-	    {match, [Url, Id]} = re:run(Params, "(?<Id>.*) (?<Url>.*)", [{capture,['Url', 'Id'], list}]),
-	    ?CONNECTOR:new_subscription(From, To, #subscription{id = Id, url = Url}),
+	    {match, [Url, Id, Feed]} = re:run(Params, "(?<Id>.+) (?<Url>.+) (?<Feed>.+)", [{capture,['Url', 'Id', 'Feed'], list}]),
+	    ?CONNECTOR:new_subscription(From, To, #subscription{id = Id, url = Url, source_type = Feed}),
 	    ok;
 	Body ->
 	    case xml:get_tag_attr_s("type", Packet) of
@@ -98,7 +98,11 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		"error" ->
 		    ?ERROR_MSG("Received error message~n~p -> ~p~n~p", [From, To, Packet]);
 		_ ->
-		    echo(To, From, strip_bom(Body))
+		    case json_eep:json_to_term(strip_bom(Body)) of
+			{error, _Reason} -> ?INFO_MSG("received unhandled xmpp message:~n~p~nparsing error:~n~p", [strip_bom(Body), _Reason]);
+			Json -> handle_json_msg(Json, From, To),
+				?INFO_MSG("parsed json:~n~p", [Json])
+		    end
 	    end
     end,
     ok;
@@ -153,3 +157,30 @@ setup_mnesia(Name, Fun) ->
 
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
+
+handle_json_msg(Proplist, From, To) ->
+    case json_get_value(<<"class">>, Proplist) of
+	undefined -> log("received xmpp-json-message that has no class attribute~n~p", [Proplist]);
+	<<"de.prisma.datamodel.subscription.Subscription">> ->
+	    SubscriptionId = json_get_value(<<"subscriptionID">>, Proplist),
+	    SourceSpec = json_get_value(<<"sourceSpecification">>, Proplist),
+	    SourceType = json_get_value(<<"sourceType">>,  SourceSpec),
+	    AccessParameters = json_get_value([<<"accessProtocol">>, <<"accessParameters">>], SourceSpec),
+	    F = fun(El) ->
+			case json_get_value(<<"parameterType">>, El) of
+			    <<"feeduri">> -> 
+				binary_to_list(json_get_value(<<"parameterValue">>, El));
+			    _ -> ""
+			end
+		end,
+	    Url = lists:flatten(lists:map(F, AccessParameters)),
+	    ?CONNECTOR:new_subscription(From, To, #subscription{id = binary_to_list(SubscriptionId), url = Url, source_type = binary_to_list(SourceType)}),
+	    ok;
+	_ -> not_handled	    
+    end.
+
+json_get_value([H|T], JsonObj) ->
+    json_get_value(T,json_get_value(H, JsonObj));
+json_get_value([],JsonObj) -> JsonObj;
+json_get_value(Key, {JsonObj}) ->
+    proplists:get_value(Key, JsonObj).

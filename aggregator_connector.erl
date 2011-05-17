@@ -157,6 +157,11 @@ get_pid_from_id(Id) ->
 	_:_ -> not_found
     end.
 
+get_attribute(El, Attr) ->
+    get_attribute(El, Attr, Attr).
+get_attribute(El, Attr, NewAttr) ->
+    {NewAttr, xml:get_path_s(El, [{elem, atom_to_list(Attr)}, cdata])}.
+
 parse_rss(Xml) ->
     try
 	Channel = xml:get_path_s(Xml, [{elem, "channel"}]),
@@ -165,15 +170,35 @@ parse_rss(Xml) ->
 	Items = [E || E = {xmlelement, "item", _, _} <- ChannelBody] ++
 	    [E || E = {xmlelement, "item", _, _} <- Rss09items],
 	Mapper = fun(Item) ->
-			 [{title, xml:get_path_s(Item, [{elem, "title"}, cdata])},
-			  {key, xml:get_path_s(Item, [{elem, "pubDate"}, cdata])},
-			  {link, xml:get_path_s(Item, [{elem, "link"}, cdata])},
-			  {content, xml:get_path_s(Item, [{elem, "description"}, cdata])}]
+			 [get_attribute(Item, title),
+			  get_attribute(Item, pubDate),
+			  get_attribute(Item, link),
+			  get_attribute(Item, content)]
 		 end,
 	lists:map(Mapper, Items)
    catch
        _Err : _Reason -> {error, badxml}
    end.
+
+parse_atom(Xml) ->
+    try
+	{xmlelement, _, _, Channel} = Xml,
+	Items = [E || E = {xmlelement, "entry",_,_} <- Channel],
+	Mapper = fun(Item) ->
+			 [get_attribute(Item, title),
+			  get_attribute(Item, link),
+			  get_attribute(Item, id, key),
+			  get_attribute(Item, summary),
+			  get_attribute(Item, content),
+			  get_attribute(Item, updated)]
+		 end,
+	Ret = lists:map(Mapper, Items),
+%	log("atom parsed: ~n~p", [Ret]),
+	Ret
+    catch
+	_Err :_Reason -> {error, badxml}
+    end.
+
 
 select_key(Streamentry) ->
     case proplists:get_value(key, Streamentry) of
@@ -206,7 +231,11 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
 	    {noreply, State};
 	Xml ->
 	    try
-		Content = parse_rss(Xml),
+		Content = case Sub#subscription.source_type of
+			      "RSS" -> parse_rss(Xml);
+			      "ATOM" -> parse_atom(Xml);
+			      Val -> parse_rss(Xml)
+			  end,
 		NewContent = extract_new_messages(Content, Sub),
 		NSub = if
 			   length(NewContent) > 0 ->
@@ -217,14 +246,14 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
 			       reply("Neue Nachrichten von " ++ get_id(State) ++ " ->\n" ++ Text, State),
 			       EnrichedContent = lists:map(fun([H|T]) ->
 								   [{subId, get_id(Sub)},
-								    {date, get_date_string()},
+								    {feed, Sub#subscription.source_type},
+								    {date, format_date()},
 								    H | T]
 							   end, NewContent),
 			       ok = store_to_couch(EnrichedContent, State),
 			       StoreSub = Sub#subscription{last_msg_key = merge_keys(Content, Sub#subscription.last_msg_key)},
 			       ok = mnesia:dirty_write(StoreSub),
 			       StoreSub;
-			   
 			   true -> Sub
 		       end,
 		callbacktimer(?POLLTIME, go_get_messages),
@@ -237,7 +266,7 @@ handle_http_response(initial_get_stream, {_,_, Body}, State) ->
     end;
 
 handle_http_response({couch_doc_store_reply, _Doclist}, {_,_, Body}, State) ->
-    log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), Body]),
+    %log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), Body]),
     {noreply, State};
 
 handle_http_response(_, {error, _Reason}, State) ->
@@ -324,7 +353,7 @@ doclist_to_json(Doclist) ->
 	      end, 
 	      Doclist).
 
-get_date_string() -> 
+format_date() -> 
     {{Y, M, D}, {H, Min, S}} = erlang:localtime(), 
     F = fun(El) -> integer_to_list(El) end, 
     F(Y) ++ "-" ++ F(M) ++ "-" ++ F(D) ++ "-"++	F(H) ++ "-" ++ F(Min) ++ "-" ++ F(S).
