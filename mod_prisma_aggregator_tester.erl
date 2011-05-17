@@ -135,7 +135,7 @@ send_subscriptions(Count, Accessor, Batchname) ->
 			   _ -> "RSS"
 		       end,
 		send_message(get_sender(), 
-			     jlib:string_to_jid("aggregator.kiiiiste"),
+			     jlib:string_to_jid("aggregator." ++ get_host()),
 			     "chat",
 			     create_json_subscription(URI, Accessor, Feed, Batchname ++ "-" ++ integer_to_list(N)))
 	end,
