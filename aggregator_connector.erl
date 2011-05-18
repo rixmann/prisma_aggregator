@@ -86,12 +86,12 @@ init([SubOrId]) ->
 		 end
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
-    callbacktimer(?POLLTIME, go_get_messages),
+    callbacktimer(10, go_get_messages),
     Callbacks = ets:new(callbacks, []),
-    {ok, ReqHandler} = ibrowse:spawn_link_worker_process("http://" ++ get_host_from_url(Subscription#subscription.url)),
+    {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
+    ibrowse:set_max_pipeline_size(Host, Port, 2),
     {ok, #state{subscription = Subscription,
-		callbacks = Callbacks,
-		http_req_handler = ReqHandler}}.
+		callbacks = Callbacks}}.
 
 handle_call(_Request, _From, State) ->
     Reply = ignored,
@@ -105,7 +105,7 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
-    case ibrowse:send_req_direct(State#state.http_req_handler, Sub#subscription.url, [], get, [], [{stream_to, self()}], 5000) of
+    case ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLLTIME - 2000) of
 	{ibrowse_req_id, RequestId} ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
 	{error, _Reason} ->
@@ -387,9 +387,10 @@ format_date() ->
     F = fun(El) -> integer_to_list(El) end, 
     F(Y) ++ "-" ++ F(M) ++ "-" ++ F(D) ++ "-"++	F(H) ++ "-" ++ F(Min) ++ "-" ++ F(S).
 
-get_host_from_url(Url) ->
-    case re:run(Url, "http://(?<Server>[^/]+)", [{capture, ['Server'], list}]) of
-	{match, [Server]} ->
-	    Server;
+get_host_and_port_from_url(Url) ->
+    case re:run(Url, "http://(?<Server>[^/:]+)(?:.?(?<=:)(?<Port>[0-9]+).*|.*)", [{capture, ['Server', 'Port'], list}]) of
+	{[], _} -> nomatch;
+	{match, [Server, []]} -> {Server, 80};
+	{match, [Server, Port]} -> {Server, list_to_integer(Port)};
 	nomatch -> nomatch
     end.
