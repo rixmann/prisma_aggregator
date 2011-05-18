@@ -102,7 +102,7 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
-    case ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], 30000) of
+    case ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], 5000) of
 	{ibrowse_req_id, RequestId} ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
 	{error, _Reason} ->
@@ -121,7 +121,7 @@ handle_cast(_Msg, State) ->
     log("ignored cast~n~p", [{_Msg, State}]),
     {noreply, State}.
 
-handle_info({ibrowse_async_headers, ReqId, _, _}, State) ->
+handle_info({ibrowse_async_headers, _ReqId, _, _}, State) ->
     {noreply, State};
 
 handle_info({ibrowse_async_response, ReqId, Content}, State) ->
@@ -362,7 +362,7 @@ store_to_couch(Doclist ,State) ->
 						   post, 
 						   Jstring,
 						   [{stream_to, self()}], 
-						   5000),
+						   2000),
     true = ets:insert(get_callbacks(State), {RequestId, {{couch_doc_store_reply, Doclist}, []}}),
     ok.
 
