@@ -23,7 +23,8 @@
 
 -record(state, 
 	{subscription = #subscription{},
-	 callbacks = ets:new(callbacks, [])}).
+	 callbacks = ets:new(callbacks, []),
+	 http_req_handler}).
 
 %%====================================================================
 %% API
@@ -87,8 +88,10 @@ init([SubOrId]) ->
     {atomic, Subscription} = mnesia:transaction(F),
     callbacktimer(?POLLTIME, go_get_messages),
     Callbacks = ets:new(callbacks, []),
+    {ok, ReqHandler} = ibrowse:spawn_link_worker_process("http://" ++ get_host_from_url(Subscription#subscription.url)),
     {ok, #state{subscription = Subscription,
-		callbacks = Callbacks}}.
+		callbacks = Callbacks,
+		http_req_handler = ReqHandler}}.
 
 handle_call(_Request, _From, State) ->
     Reply = ignored,
@@ -102,7 +105,7 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
-    case ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], 5000) of
+    case ibrowse:send_req_direct(State#state.http_req_handler, Sub#subscription.url, [], get, [], [{stream_to, self()}], 5000) of
 	{ibrowse_req_id, RequestId} ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
 	{error, _Reason} ->
@@ -383,3 +386,10 @@ format_date() ->
     {{Y, M, D}, {H, Min, S}} = erlang:localtime(), 
     F = fun(El) -> integer_to_list(El) end, 
     F(Y) ++ "-" ++ F(M) ++ "-" ++ F(D) ++ "-"++	F(H) ++ "-" ++ F(Min) ++ "-" ++ F(S).
+
+get_host_from_url(Url) ->
+    case re:run(Url, "http://(?<Server>[^/]+)", [{capture, ['Server'], list}]) of
+	{match, [Server]} ->
+	    Server;
+	nomatch -> nomatch
+    end.
