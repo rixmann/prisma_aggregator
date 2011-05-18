@@ -85,9 +85,8 @@ init([SubOrId]) ->
 		 end
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
-    {ibrowse_req_id, RequestId} = ibrowse:send_req(Subscription#subscription.url, [], get, [], [{stream_to, self()}], 10000),
+    callbacktimer(?POLLTIME, go_get_messages),
     Callbacks = ets:new(callbacks, []),
-    true = ets:insert(Callbacks, {RequestId, {initial_get_stream, []}}),
     {ok, #state{subscription = Subscription,
 		callbacks = Callbacks}}.
 
@@ -103,8 +102,13 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
-    {ibrowse_req_id, RequestId} = ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], 10000),
-    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}}),
+    case ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], 30000) of
+	{ibrowse_req_id, RequestId} ->
+	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
+	{error, _Reason} ->
+	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
+	    callbacktimer(?POLLTIME, go_get_messages)
+    end,
     {noreply, State};
 
 handle_cast(stop, State) ->
@@ -117,20 +121,34 @@ handle_cast(_Msg, State) ->
     log("ignored cast~n~p", [{_Msg, State}]),
     {noreply, State}.
 
-handle_info({ibrowse_async_headers, _ReqId, _, _}, State) ->
+handle_info({ibrowse_async_headers, ReqId, _, _}, State) ->
     {noreply, State};
 
 handle_info({ibrowse_async_response, ReqId, Content}, State) ->
-    [{ReqId, {Hook, List}}] = ets:lookup(get_callbacks(State), ReqId),
-    ets:insert(get_callbacks(State), {ReqId, {Hook, [Content | List]}}),
+    case ets:lookup(get_callbacks(State), ReqId) of
+	[{ReqId, {Hook, List}}] ->
+    	    ets:insert(get_callbacks(State), {ReqId, {Hook, [Content | List]}});
+	[] -> log("~p didn't find request id in callbacks for http-async-resp!!", [get_id(State)]); 
+	Val -> log("ets-lookup really went wrong on worker ~p~n~p", [get_id(State), Val])
+
+    end,
     {noreply, State};
    
 	
 handle_info({ibrowse_async_response_end, ReqId} , State) ->
-    [{_, {Hook, List}}] = ets:lookup(get_callbacks(State), ReqId),
-    Content = lists:flatten(lists:reverse(List)),
-    ets:delete(get_callbacks(State), ReqId),
-    handle_http_response(Hook, Content, State);
+    case ets:lookup(get_callbacks(State), ReqId) of
+	[{_, {Hook, List}}] ->
+	    Content = lists:flatten(lists:reverse(List)),
+	    ets:delete(get_callbacks(State), ReqId),
+	    handle_http_response(Hook, Content, State);
+	[] -> 
+	    log("~p didn't find req-id in callbacks for http-end", [get_id(State)]),
+	    callbacktimer(?POLLTIME, go_get_messages),
+	    {noreply, State};
+	Val -> 
+	    log("ets-lookup really went wrong on worker ~p~n~p", [get_id(State), Val]),
+	    {noreply, State}
+    end;
 
 handle_info({'EXIT', _Reason, normal}, State) ->
     %log("on worker ~p, process stopped with Reason ~n~p", [get_id(State), Reason]),
@@ -344,7 +362,7 @@ store_to_couch(Doclist ,State) ->
 						   post, 
 						   Jstring,
 						   [{stream_to, self()}], 
-						   10000),
+						   5000),
     true = ets:insert(get_callbacks(State), {RequestId, {{couch_doc_store_reply, Doclist}, []}}),
     ok.
 

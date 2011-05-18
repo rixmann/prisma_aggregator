@@ -101,8 +101,7 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		_ ->
 		    case json_eep:json_to_term(strip_bom(Body)) of
 			{error, _Reason} -> ?INFO_MSG("received unhandled xmpp message:~n~p~nparsing error:~n~p", [strip_bom(Body), _Reason]);
-			Json -> handle_json_msg(Json, From),
-				?INFO_MSG("parsed json:~n~p", [Json])
+			Json -> handle_json_msg(Json, From)
 		    end
 	    end
     end,

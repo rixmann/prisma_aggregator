@@ -129,7 +129,7 @@ create_json_subscription(Url, Accessor, SourceType, Id) ->
 send_subscriptions(Count, Accessor, Batchname) ->
     {ok, Device} = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
     F = fun(Line, N) ->
-		URI = lists:sublist(Line, 1, length(Line) -2),
+		URI = lists:sublist(Line, 1, length(Line) -1),
 		Feed = case re:run(URI, ".*((?<Atom>atom)|(?<Rss>rss)).*", [{capture, ['Atom', 'Rss'], list}]) of
 			   {match, ["atom", _]} -> "ATOM";
 			   _ -> "RSS"
