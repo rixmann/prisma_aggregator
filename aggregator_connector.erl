@@ -34,7 +34,7 @@ new_subscription(Sub = #subscription{}) ->
     Id = get_id(Sub),
     F = fun() -> mnesia:read(?PST, Id) end,
     case mnesia:transaction(F) of
-	{atomic, [Entry]} -> reply("The Stream " ++ Id ++ " is already being polled.", Sub),
+	{atomic, [Entry]} -> %reply("The Stream " ++ Id ++ " is already being polled.", Sub),
 			     Entry;
 	_ -> supervisor:start_child(?SUP, [Sub])
     end.
