@@ -18,6 +18,8 @@ start(Host, Opts) ->
     ets:insert(?CFG,{host, Host}),
     ibrowse:start(),
     setup_mnesia(),
+    {A, B, C} = now(),
+    random:seed(A, B, C),
     %Proc = gen_mod:get_module_proc(Host, ?MODULE),
     ChildSpec = {?SUP,
                  {?SUP, start_link, [Host, Opts]},
