@@ -86,7 +86,10 @@ init([SubOrId]) ->
 		 end
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
-    callbacktimer(random:uniform(?POLLTIME), go_get_messages),
+    {A, B, C} = now(),
+    random:seed(A, B, C),
+    RandomCallbackTime = random:uniform(?POLLTIME),
+    callbacktimer(RandomCallbackTime, go_get_messages),
     Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
     ibrowse:set_max_pipeline_size(Host, Port, 2),
