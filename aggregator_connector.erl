@@ -9,7 +9,7 @@
 
 -behaviour(gen_server).
 -define(POLLTIME, 60000).
-
+-define(POLL_TIMEOUT, 30000).
 
 %% API
 -export([start_link/1, stop/1, collapse/1, new_subscription/1, 
@@ -86,10 +86,10 @@ init([SubOrId]) ->
 		 end
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
-    callbacktimer(random, go_get_messages),
+    callbacktimer(random, go_get_messages, 5000),
     Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
-    ibrowse:set_max_pipeline_size(Host, Port, 2),
+    ibrowse:set_max_pipeline_size(Host, Port, 1),
     {ok, #state{subscription = Subscription,
 		callbacks = Callbacks}}.
 
@@ -105,14 +105,19 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
-    case catch ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLLTIME - 2000) of
+    case catch ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLL_TIMEOUT) of
 	{ibrowse_req_id, RequestId} ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
+	{error, retry_later} -> callbacktimer(5, go_get_messages);
+	{error, req_timedout} -> callbacktimer(?POLLTIME, go_get_messages);
+	{error, {conn_failed, {error, timeout}}} -> callbacktimer(?POLLTIME, go_get_messages);
+	{error, {conn_failed, {error, _}}} -> callbacktimer(random, go_get_messages, 10 * ?POLLTIME);
 	{error, _Reason} ->
-	    %log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
+%	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
 	    callbacktimer(random, go_get_messages);
-	Val -> log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), Val]),
-	       callbacktimer(random, go_get_messages)
+	{'EXIT', _} -> callbacktimer(5, go_get_messages);
+	Val -> %log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
+	       callbacktimer(5, go_get_messages)
     end,
     {noreply, State};
 
@@ -160,11 +165,15 @@ handle_info({'EXIT', _Reason, normal}, State) ->
     {noreply, State};
 
 handle_info({Ref, {error, _}}, State) ->
+    %Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
+    %log("handle info, error ~p anzahl callbacks: ~p", [get_id(State), Content]),
     ets:delete(get_callbacks(State), Ref),
     {noreply, State};
 
-handle_info(Info, State) ->
-    log("ignored info: ~n~p", [{Info, State}]),
+handle_info(_Info, State) ->
+    %Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
+    %log("handle info, letzte klausel ~p anzahl callbacks: ~p", [get_id(State), Content]),
+%    log("ignored info: ~n~p", [{Info, State}]),
     {noreply, State}.
 
 
@@ -327,11 +336,12 @@ merge_keys(Items, OldKeys, N) ->
 	      lists:sublist(lists:append(lists:sublist(Items, N), OldKeys),
 			    N)).
 		 
+callbacktimer(random, Callback, Offset) ->
+    RandomCallbackTime = ?RAND:uniform([?POLLTIME]),
+    callbacktimer(RandomCallbackTime + Offset, Callback).
+
 callbacktimer(random, Callback) ->
-    {A, B, C} = now(),
-    random:seed(A, B, C),
-    RandomCallbackTime = random:uniform(?POLLTIME),
-    callbacktimer(RandomCallbackTime, Callback);
+    callbacktimer(random, Callback, 0);
 callbacktimer(Time, Callback) ->
     Caller = self(),
     F = fun() ->
@@ -375,7 +385,7 @@ store_to_couch(Doclist ,State) ->
 						   post, 
 						   Jstring,
 						   [{stream_to, self()}], 
-						   2000),
+						   1000),
     true = ets:insert(get_callbacks(State), {RequestId, {{couch_doc_store_reply, Doclist}, []}}),
     ok.
 
