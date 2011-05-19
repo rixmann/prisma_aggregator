@@ -86,10 +86,7 @@ init([SubOrId]) ->
 		 end
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
-    {A, B, C} = now(),
-    random:seed(A, B, C),
-    RandomCallbackTime = random:uniform(?POLLTIME),
-    callbacktimer(RandomCallbackTime, go_get_messages),
+    callbacktimer(random, go_get_messages),
     Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
     ibrowse:set_max_pipeline_size(Host, Port, 2),
@@ -108,12 +105,14 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
 
 handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
-    case ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLLTIME - 2000) of
+    case catch ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLLTIME - 2000) of
 	{ibrowse_req_id, RequestId} ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
 	{error, _Reason} ->
-	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
-	    callbacktimer(?POLLTIME, go_get_messages)
+	    %log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
+	    callbacktimer(random, go_get_messages);
+	Val -> log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), Val]),
+	       callbacktimer(random, go_get_messages)
     end,
     {noreply, State};
 
@@ -328,7 +327,11 @@ merge_keys(Items, OldKeys, N) ->
 	      lists:sublist(lists:append(lists:sublist(Items, N), OldKeys),
 			    N)).
 		 
-
+callbacktimer(random, Callback) ->
+    {A, B, C} = now(),
+    random:seed(A, B, C),
+    RandomCallbackTime = random:uniform(?POLLTIME),
+    callbacktimer(RandomCallbackTime, Callback);
 callbacktimer(Time, Callback) ->
     Caller = self(),
     F = fun() ->
