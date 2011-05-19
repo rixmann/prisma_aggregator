@@ -157,6 +157,10 @@ handle_info({'EXIT', _Reason, normal}, State) ->
     %log("on worker ~p, process stopped with Reason ~n~p", [get_id(State), Reason]),
     {noreply, State};
 
+handle_info({Ref, {error, _}}, State) ->
+    ets:delete(get_callbacks(State), Ref),
+    {noreply, State};
+
 handle_info(Info, State) ->
     log("ignored info: ~n~p", [{Info, State}]),
     {noreply, State}.
