@@ -141,14 +141,17 @@ send_subscriptions(Count, Accessor, Batchname) ->
 	end,
     spawn(?MODULE, map_to_n_lines, [Device, Count, F]).
 
-map_to_n_lines(Device, 0, _F) ->
-    Device;
 map_to_n_lines(Device, N, F) ->
+    map_to_n_lines(Device, 1, N, F).
+
+map_to_n_lines(Device, N, N, _F) ->
+    Device;
+map_to_n_lines(Device, Count, N, F) ->
     case io:get_line(Device, "") of
         eof  -> file:close(Device), 
 		file_ended;
-        Line -> F(Line, N),
-		map_to_n_lines(Device, N - 1, F)
+        Line -> F(Line, Count),
+		map_to_n_lines(Device, Count + 1, N, F)
     end.
 
 get_sender() ->
