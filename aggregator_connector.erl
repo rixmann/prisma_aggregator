@@ -164,9 +164,9 @@ handle_info({'EXIT', _Reason, normal}, State) ->
     %log("on worker ~p, process stopped with Reason ~n~p", [get_id(State), Reason]),
     {noreply, State};
 
-handle_info({Ref, {error, _}}, State) ->
-    %Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
-    %log("handle info, error ~p anzahl callbacks: ~p", [get_id(State), Content]),
+handle_info({Ref, {error, _}} = F, State) ->
+    Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
+    log("handle info on ~p, error:~n~p anzahl callbacks:~n~p", [get_id(State), F, Content]),
     ets:delete(get_callbacks(State), Ref),
     {noreply, State};
 
