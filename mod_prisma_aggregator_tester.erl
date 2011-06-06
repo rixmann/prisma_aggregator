@@ -98,6 +98,16 @@ send_message(From, To, TypeStr, BodyStr) ->
          [{xmlcdata, BodyStr}]}]},
     ejabberd_router:route(From, To, XmlBody).
 
+send_iq(From, To, TypeStr, BodyStr) ->
+    XmlBody = {xmlelement, "iq",
+	       [{"type", TypeStr},
+		{"from", jlib:jid_to_string(From)},
+		{"to", jlib:jid_to_string(To)}],
+	       [{xmlelement, "query", [],
+		 [{xmlcdata, BodyStr}]}]},
+    ejabberd_router:route(From, To, XmlBody).
+
+
 get_host() ->
     [{host, Ret}] = ets:lookup(?CFG, host),
     Ret.
@@ -134,10 +144,10 @@ send_subscriptions(Count, Accessor, Batchname) ->
 			   {match, ["atom", _]} -> "ATOM";
 			   _ -> "RSS"
 		       end,
-		send_message(get_sender(), 
-			     jlib:string_to_jid("aggregator." ++ get_host()),
-			     "chat",
-			     create_json_subscription(URI, Accessor, Feed, Batchname ++ "-" ++ integer_to_list(N)))
+		send_iq(get_sender(), 
+			jlib:string_to_jid("aggregator." ++ get_host()),
+			"post",
+			create_json_subscription(URI, Accessor, Feed, Batchname ++ "-" ++ integer_to_list(N)))
 	end,
     spawn(?MODULE, map_to_n_lines, [Device, Count, F]).
 
@@ -145,7 +155,7 @@ map_to_n_lines(Device, N, F) ->
     map_to_n_lines(Device, 1, N, F).
 
 map_to_n_lines(Device, N, N, _F) ->
-    Device;
+    file:close(Device);
 map_to_n_lines(Device, Count, N, F) ->
     case io:get_line(Device, "") of
         eof  -> file:close(Device), 
