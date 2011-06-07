@@ -96,28 +96,17 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 	    {match, [Url, Id, Feed]} = re:run(Params, "(?<Id>.+) (?<Url>.+) (?<Feed>.+)", [{capture,['Url', 'Id', 'Feed'], list}]),
 	    ?CONNECTOR:new_subscription(From, To, #subscription{id = Id, url = Url, source_type = Feed}),
 	    ok
-	%% Body ->
-	%%     case xml:get_tag_attr_s("type", Packet) of
-		
-	%% 	"error" ->
-	%% 	    ?ERROR_MSG("Received error message~n~p -> ~p~n~p", [From, To, Packet]);
-	%% 	_ ->
-	%% 	    case json_eep:json_to_term(strip_bom(Body)) of
-	%% 		{error, _Reason} -> ?INFO_MSG("received unhandled xmpp message:~n~p~nparsing error:~n~p", [strip_bom(Body), _Reason]);
-	%% 		Json -> handle_json_msg(Json, From)
-	%% 	    end
-	%%     end
     end,
     ok;
 
 route(From, To, {xmlelement, "iq", _, _} = Packet) ->
     Body = strip_bom(xml:get_subtag_cdata(Packet, "query")),
     case xml:get_tag_attr_s("type", Packet) of
-	"post" -> 
+	F when (F =:= "subscribeAll") or (F =:= "subscribe") -> 
 	    case json_eep:json_to_term(Body) of
 		{error, _Reason} -> ?INFO_MSG("received unhandled xmpp message:~n~p~nparsing error:~n~p", [Body, _Reason]);
 		Json -> handle_json_msg(Json, From)
-	    end; 
+	    end;
 	_ ->  ?INFO_MSG("Received unhandled iq~n~p -> ~p~n~p", [From, To, Packet])
     end;
 
@@ -172,6 +161,9 @@ setup_mnesia(Name, Fun) ->
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
+handle_json_msg([H|T], _From) ->
+    lists:map(fun(El) -> handle_json_msg(El, _From) end,
+	      [H|T]);
 handle_json_msg(Proplist, _From) ->
     case json_get_value(<<"class">>, Proplist) of
 	undefined -> log("received xmpp-json-message that has no class attribute~n~p", [Proplist]);

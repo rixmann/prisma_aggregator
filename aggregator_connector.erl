@@ -39,6 +39,9 @@ new_subscription(Sub = #subscription{}) ->
 	_ -> supervisor:start_child(?SUP, [Sub])
     end.
 
+new_subscriptions([H = #subscription{}|T]) ->
+    lists:map(new_suscription, [H|T]).
+
 start_worker(Id) ->
     supervisor:start_child(?SUP, [Id]).
 
@@ -160,8 +163,7 @@ handle_info({ibrowse_async_response_end, ReqId} , State) ->
 	    {noreply, State}
     end;
 
-handle_info({'EXIT', _Reason, normal}, State) ->
-    %log("on worker ~p, process stopped with Reason ~n~p", [get_id(State), Reason]),
+handle_info({'EXIT', _Reason, normal}, State) -> %timer process died
     {noreply, State};
 
 handle_info({Ref, {error, _}} = F, State) ->
