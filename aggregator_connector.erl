@@ -112,31 +112,31 @@ handle_cast(go_get_messages, State) ->
 	{ibrowse_req_id, RequestId} ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
 	{error, retry_later} -> 
-	    message_to_controller(create_prisma_error(get_id(State),
+	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"To many Http-Requests, system overloaded">>),
 				  Sub),
 	    callbacktimer(5, go_get_messages);
 	{error, req_timedout} -> 
-	    message_to_controller(create_prisma_error(get_id(State),
+	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, timeout">>),
 				  Sub),
 	    callbacktimer(?POLLTIME, go_get_messages);
 	{error, {conn_failed, {error, timeout}}} -> 
-	    message_to_controller(create_prisma_error(get_id(State),
+	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, connection failed -> timeout">>),
 				  Sub),
 	    callbacktimer(?POLLTIME, go_get_messages);
 	{error, {conn_failed, {error, _}}} -> 
-	    message_to_controller(create_prisma_error(get_id(State),
+	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, connection failed">>),
 				  Sub),
 	    callbacktimer(random, go_get_messages, 10 * ?POLLTIME);
 	{error, _Reason} ->
-	    message_to_controller(create_prisma_error(get_id(State),
+	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, undefinded">>),
 				  Sub),
@@ -144,7 +144,7 @@ handle_cast(go_get_messages, State) ->
 	    callbacktimer(random, go_get_messages);
 	{'EXIT', _} -> callbacktimer(5, go_get_messages);
 	Val -> log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
-	       message_to_controller(create_prisma_error(get_id(State),
+	       message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 							 -2,
 							 <<"Network error, undefinded">>),
 				     Sub),
@@ -199,7 +199,7 @@ handle_info({Ref, {error, _}} = F, State) ->
 						%log("handle info on ~p, error:~n~p anzahl callbacks:~n~p", [get_id(State), F, Content]),
     
 						%ets:delete(get_callbacks(State), Ref),
-    message_to_controller(create_prisma_error(get_id(State),
+    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 					      -2,
 					      <<"Network error, undefinded">>),
 			  State),
@@ -306,7 +306,7 @@ handle_http_response(initial_get_stream, Body, State) ->
     Sub = State#state.subscription,
     case xml_stream:parse_element(Body) of
 	{error, {_, _Reason}} -> 
-	    message_to_controller(create_prisma_error(get_id(Sub),
+	    message_to_controller(create_prisma_error(list_to_binary(get_id(Sub)),
 						      -1,
 						      <<"Stream returned invalid XML">>),
 				  Sub),
@@ -344,7 +344,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 		{noreply, State#state{subscription = NSub}}
 	    catch
 		_Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
-		    message_to_controller(create_prisma_error(get_id(Sub),
+		    message_to_controller(create_prisma_error(list_to_binary(get_id(Sub)),
 							      -1,
 							      <<"Error while trying to interpret XML">>),
 					  Sub),
@@ -359,7 +359,7 @@ handle_http_response({couch_doc_store_reply, _Doclist}, _Body, State) ->
 
 handle_http_response(_, {error, _Reason}, State) ->
     log("Worker ~p received an polling error: ~n~p", [get_id(State), _Reason]),
-    message_to_controller(create_prisma_error(get_id(State),
+    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 					      -2,
 					      list_to_binary(_Reason)),
 			  State),
