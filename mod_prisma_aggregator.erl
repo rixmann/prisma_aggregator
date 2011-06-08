@@ -6,7 +6,6 @@
 -include("jlib.hrl").
 
 -define(CONNECTOR, aggregator_connector).
--define(CFG, aggregator_config).
 
 -compile(export_all).
 

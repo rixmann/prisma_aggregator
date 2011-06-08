@@ -5,7 +5,7 @@
 -include("prisma_aggregator.hrl").
 -include("jlib.hrl").
 -define(AGGREGATOR, "aggregator").
--define(CFG, aggregator_tester_config).
+-define(TCFG, aggregator_tester_config).
 
 -export([map_to_n_lines/3]).
 -export([start/2, stop/1, route/3]).
@@ -13,14 +13,14 @@
 %% gen_mod implementation
 start(Host, Opts) ->
     MyHost = gen_mod:get_opt_host(Host, Opts, "aggregatortester.@HOST@"),
-    ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
-    ets:insert(?CFG,{host, Host}),
+    ets:new(?TCFG, [named_table, protected, set, {keypos, 1}]),
+    ets:insert(?TCFG,{host, Host}),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
    ok.
 
 stop(_Host) ->
     ?INFO_MSG("mod_prisma_aggregator_tester stopped", []),
-    ets:delete(?CFG),
+    ets:delete(?TCFG),
     ok.
 
 %% interfacing fuctions
@@ -113,7 +113,7 @@ send_iq(From, To, TypeStr, BodyStr) ->
 
 
 get_host() ->
-    [{host, Ret}] = ets:lookup(?CFG, host),
+    [{host, Ret}] = ets:lookup(?TCFG, host),
     Ret.
 
 create_json_subscription(Url, Accessor, SourceType, Id) ->

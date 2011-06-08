@@ -111,15 +111,43 @@ handle_cast(go_get_messages, State) ->
     case catch ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLL_TIMEOUT) of
 	{ibrowse_req_id, RequestId} ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
-	{error, retry_later} -> callbacktimer(5, go_get_messages);
-	{error, req_timedout} -> callbacktimer(?POLLTIME, go_get_messages);
-	{error, {conn_failed, {error, timeout}}} -> callbacktimer(?POLLTIME, go_get_messages);
-	{error, {conn_failed, {error, _}}} -> callbacktimer(random, go_get_messages, 10 * ?POLLTIME);
+	{error, retry_later} -> 
+	    message_to_controller(create_prisma_error(get_id(State),
+						      -2,
+						      <<"To many Http-Requests, system overloaded">>),
+				  Sub),
+	    callbacktimer(5, go_get_messages);
+	{error, req_timedout} -> 
+	    message_to_controller(create_prisma_error(get_id(State),
+						      -2,
+						      <<"Network error, timeout">>),
+				  Sub),
+	    callbacktimer(?POLLTIME, go_get_messages);
+	{error, {conn_failed, {error, timeout}}} -> 
+	    message_to_controller(create_prisma_error(get_id(State),
+						      -2,
+						      <<"Network error, connection failed -> timeout">>),
+				  Sub),
+	    callbacktimer(?POLLTIME, go_get_messages);
+	{error, {conn_failed, {error, _}}} -> 
+	    message_to_controller(create_prisma_error(get_id(State),
+						      -2,
+						      <<"Network error, connection failed">>),
+				  Sub),
+	    callbacktimer(random, go_get_messages, 10 * ?POLLTIME);
 	{error, _Reason} ->
-%	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
+	    message_to_controller(create_prisma_error(get_id(State),
+						      -2,
+						      <<"Network error, undefinded">>),
+				  Sub),
+						%	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
 	    callbacktimer(random, go_get_messages);
 	{'EXIT', _} -> callbacktimer(5, go_get_messages);
-	Val -> %log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
+	Val -> log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
+	       message_to_controller(create_prisma_error(get_id(State),
+							 -2,
+							 <<"Network error, undefinded">>),
+				     Sub),
 	       callbacktimer(5, go_get_messages)
     end,
     {noreply, State};
@@ -171,6 +199,10 @@ handle_info({Ref, {error, _}} = F, State) ->
 						%log("handle info on ~p, error:~n~p anzahl callbacks:~n~p", [get_id(State), F, Content]),
     
 						%ets:delete(get_callbacks(State), Ref),
+    message_to_controller(create_prisma_error(get_id(State),
+					      -2,
+					      <<"Network error, undefinded">>),
+			  State),
     callbacktimer(random, go_get_messages, 10 * ?POLLTIME),
     {noreply, State};
 
@@ -274,9 +306,10 @@ handle_http_response(initial_get_stream, Body, State) ->
     Sub = State#state.subscription,
     case xml_stream:parse_element(Body) of
 	{error, {_, _Reason}} -> 
-	    %log("Error while parsing xml in worker ~p: ~p", [get_id(State), Reason]),
-	    %reply("Error, the stream " ++ get_id(State)  ++ " returns bad xml.", State),
-	    
+	    message_to_controller(create_prisma_error(get_id(Sub),
+						      -1,
+						      <<"Stream returned invalid XML">>),
+				  Sub),
 	    callbacktimer(?POLLTIME, go_get_messages),
 	    {noreply, State};
 	Xml ->
@@ -294,7 +327,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 									      list_to_binary(proplists:get_value(title, Val)))
 						 end, 
 						 NewContent),
-			       reply(json_eep:term_to_json(Text), State),
+			       message_to_accessor(json_eep:term_to_json(Text), State),
 			       EnrichedContent = lists:map(fun([H|T]) ->
 								   [{subId, get_id(Sub)},
 								    {feed, Sub#subscription.source_type},
@@ -311,8 +344,12 @@ handle_http_response(initial_get_stream, Body, State) ->
 		{noreply, State#state{subscription = NSub}}
 	    catch
 		_Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
-			     callbacktimer(?POLLTIME, go_get_messages),
-			     {noreply, State}
+		    message_to_controller(create_prisma_error(get_id(Sub),
+							      -1,
+							      <<"Error while trying to interpret XML">>),
+					  Sub),
+		    callbacktimer(?POLLTIME, go_get_messages),
+		    {noreply, State}
 	    end
     end;
 
@@ -322,6 +359,10 @@ handle_http_response({couch_doc_store_reply, _Doclist}, _Body, State) ->
 
 handle_http_response(_, {error, _Reason}, State) ->
     log("Worker ~p received an polling error: ~n~p", [get_id(State), _Reason]),
+    message_to_controller(create_prisma_error(get_id(State),
+					      -2,
+					      list_to_binary(_Reason)),
+			  State),
     callbacktimer(?POLLTIME, go_get_messages),
     {noreply,State}.
 
@@ -366,11 +407,20 @@ get_id(State) ->
 get_callbacks(State) ->
     State#state.callbacks.
 
-reply(Msg, #state{subscription = Sub}) ->
-    reply(Msg, Sub);
-reply(Msg, Sub) ->
+message_to_accessor(Msg, #state{subscription = Sub}) ->
+    message_to_accessor(Msg, Sub);
+message_to_accessor(Msg, Sub) ->
     mod_prisma_aggregator:send_message(Sub#subscription.host,
 				       Sub#subscription.accessor,
+				       "chat", %TODO
+				       Msg).
+
+message_to_controller(Msg, #state{subscription = Sub}) ->
+    message_to_controller(Msg, Sub);
+
+message_to_controller(Msg, Sub) ->
+    mod_prisma_aggregator:send_message(Sub#subscription.host,
+				       jlib:string_to_jid(get_controller()),
 				       "chat", %TODO
 				       Msg).
 log(Msg, Vars) ->
@@ -439,3 +489,17 @@ create_prisma_message(SubId, Content) ->
       {<<"sender">>,null},
       {<<"subscriptionID">>,SubId},
       {<<"title">>,null}]}.
+
+create_prisma_error(SubId, Type, Desc) ->
+    {[{<<"class">>,<<"de.prisma.datamodel.message.ErrorMessage">>},
+      {<<"subscriptionID">>, SubId},
+      {<<"errorType">>, Type},
+      {<<"errorDescription">>, Desc}]}.
+
+get_controller() ->
+    %"aggregatortester." ++ get_host().
+    "admin@" ++ get_host().
+
+get_host() ->
+    [{host, Ret}] = ets:lookup(?CFG, host),
+    Ret.
