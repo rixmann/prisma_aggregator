@@ -13,7 +13,8 @@
 
 %% API
 -export([start_link/1, stop/1, collapse/1, new_subscription/1, 
-	 start_worker/1, stop_all_and_delete_mnesia/0, rebind_all/1]).
+	 start_worker/1, stop_all_and_delete_mnesia/0, rebind_all/1,
+	 unsubscribe/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
