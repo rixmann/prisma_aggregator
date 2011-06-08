@@ -25,14 +25,13 @@ start(Host, Opts) ->
     			   1000,
     			   worker,
     			   [?RAND]},
-    StartVal = supervisor:start_child(ejabberd_sup, RandomGeneratorSpec),
-    log("result of starting random_generator:~n~p", [StartVal]),
+    {ok, _} = supervisor:start_child(ejabberd_sup, RandomGeneratorSpec),
     ConnectorSupSpec = {?SUP,
 			{?SUP, start_link, [Host, Opts]},
 			permanent,
 			1000,
 			supervisor,
-			[?MODULE, aggregator_connector, ?SUP]}, %TODO add ?SUP
+			[?MODULE, aggregator_connector, ?SUP]},
     supervisor:start_child(ejabberd_sup, ConnectorSupSpec),
     ?INFO_MSG("mod_prisma_aggregator starting!, module: ~p~n", [?MODULE]),
     F = fun() -> mnesia:all_keys(?PST) end,
@@ -41,7 +40,6 @@ start(Host, Opts) ->
 		      aggregator_connector:start_worker(El)
 	      end, Entries),
     log("read PST~n~p", [Entries]),
-% add a new virtual host / subdomain "echo".example.com
     MyHost = gen_mod:get_opt_host(Host, Opts, "aggregator.@HOST@"),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
     
@@ -50,6 +48,9 @@ start(Host, Opts) ->
 stop(_Host) ->
     supervisor:terminate_child(ejabberd_sup, ?SUP),
     supervisor:delete_child(ejabberd_sup, ?SUP),
+    supervisor:terminate_child(ejabberd_sup, ?RAND),
+    supervisor:delete_child(ejabberd_sup, ?RAND),
+    ibrowse:stop(),
     {atomic, ok} = mnesia:delete_table(?SPT),
     inets:stop(httpc, ?INETS),
     inets:stop(),
@@ -102,10 +103,13 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 route(From, To, {xmlelement, "iq", _, _} = Packet) ->
     Body = strip_bom(xml:get_subtag_cdata(Packet, "query")),
     case xml:get_tag_attr_s("type", Packet) of
-	F when (F =:= "subscribeAll") or (F =:= "subscribe") -> 
+	F when (F =:= "subscribeAll") or 
+	       (F =:= "subscribe") or
+	       (F =:= "unsubscribe") or
+	       (F =:= "updateSubscription") -> 
 	    case json_eep:json_to_term(Body) of
 		{error, _Reason} -> ?INFO_MSG("received unhandled xmpp message:~n~p~nparsing error:~n~p", [Body, _Reason]);
-		Json -> handle_json_msg(Json, From)
+		Json -> handle_json_msg(Json, From, F)
 	    end;
 	_ ->  ?INFO_MSG("Received unhandled iq~n~p -> ~p~n~p", [From, To, Packet])
     end;
@@ -161,10 +165,10 @@ setup_mnesia(Name, Fun) ->
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
-handle_json_msg([H|T], _From) ->
-    lists:map(fun(El) -> handle_json_msg(El, _From) end,
+handle_json_msg([H|T], _From, Type) ->
+    lists:map(fun(El) -> handle_json_msg(El, _From, Type) end,
 	      [H|T]);
-handle_json_msg(Proplist, _From) ->
+handle_json_msg(Proplist, _From, Type) ->
     case json_get_value(<<"class">>, Proplist) of
 	undefined -> log("received xmpp-json-message that has no class attribute~n~p", [Proplist]);
 	<<"de.prisma.datamodel.subscription.Subscription">> ->

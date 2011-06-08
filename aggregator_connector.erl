@@ -276,6 +276,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 	{error, {_, _Reason}} -> 
 	    %log("Error while parsing xml in worker ~p: ~p", [get_id(State), Reason]),
 	    %reply("Error, the stream " ++ get_id(State)  ++ " returns bad xml.", State),
+	    
 	    callbacktimer(?POLLTIME, go_get_messages),
 	    {noreply, State};
 	Xml ->
@@ -288,11 +289,12 @@ handle_http_response(initial_get_stream, Body, State) ->
 		NewContent = extract_new_messages(Content, Sub),
 		NSub = if
 			   length(NewContent) > 0 ->
-			       Text = lists:flatten(lists:map(fun(Val) -> 
-								      proplists:get_value(title, Val) ++ "\n"
-							      end, 
-							      NewContent)),
-			       reply("Neue Nachrichten von " ++ get_id(State) ++ " ->\n" ++ Text, State),
+			       Text = {lists:map(fun(Val) -> 
+							 create_prisma_message(get_id(State),
+									       proplists:get_value(title, Val))
+						 end, 
+						 NewContent)},
+			       reply(json_eep:term_to_json(Text), State),
 			       EnrichedContent = lists:map(fun([H|T]) ->
 								   [{subId, get_id(Sub)},
 								    {feed, Sub#subscription.source_type},
@@ -369,7 +371,7 @@ reply(Msg, #state{subscription = Sub}) ->
 reply(Msg, Sub) ->
     mod_prisma_aggregator:send_message(Sub#subscription.host,
 				       Sub#subscription.accessor,
-				       "chat",
+				       "message",
 				       Msg).
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
@@ -418,3 +420,22 @@ get_host_and_port_from_url(Url) ->
 	{match, [Server, Port]} -> {Server, list_to_integer(Port)};
 	nomatch -> nomatch
     end.
+
+create_prisma_message(SubId, Content) ->
+    {[{<<"class">>,<<"de.prisma.datamodel.message.Message">>},
+      {<<"id">>,null},
+      {<<"messageID">>,null},
+      {<<"messageParts">>,
+       [{[{<<"class">>,<<"de.prisma.datamodel.message.MessagePart">>},
+	  {<<"content">>,
+	   Content},
+	  {<<"contentType">>,<<"text">>},
+	  {<<"encoding">>,null},
+	  {<<"id">>,null}]}]},
+      {<<"priority">>,null},
+      {<<"publicationDate">>,null},
+      {<<"receivingDate">>,null},
+      {<<"recipient">>,null},
+      {<<"sender">>,null},
+      {<<"subscriptionID">>,SubId},
+      {<<"title">>,null}]}.
