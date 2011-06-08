@@ -193,12 +193,10 @@ get_sender() ->
     jlib:string_to_jid("aggregatortester." ++ get_host()).
 
 send_unsubscribe_bulk(Name, Start, Stop) ->
-    ?INFO_MSG("send_unsubscribe_bulk, params: ~p ~p ~p", [Name, Start, Stop]),
     SubList = lists:map(fun(El) ->
-				Name ++ "-" ++ integer_to_list(El + Start)
+				Name ++ "-" ++ integer_to_list(El + list_to_integer(Start))
 			end,
-			lists:seq(0, Stop - Start)),
-    ?INFO_MSG("SubList created", []),
+			lists:seq(0, list_to_integer(Stop) - list_to_integer(Start))),
     send_iq(get_sender(),
 	    jlib:string_to_jid("aggregator." ++ get_host()),
 	    "unsubscribe",
