@@ -198,6 +198,7 @@ send_unsubscribe_bulk(Name, Start, Stop) ->
 				Name ++ "-" ++ integer_to_list(El + Start)
 			end,
 			lists:seq(0, Stop - Start)),
+    ?INFO_MSG("SubList created", []),
     send_iq(get_sender(),
 	    jlib:string_to_jid("aggregator." ++ get_host()),
 	    "unsubscribe",
