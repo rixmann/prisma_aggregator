@@ -46,7 +46,9 @@ new_subscriptions([H = #subscription{}|T]) ->
 
 unsubscribe(Id) ->
     case get_pid_from_id(Id) of
-	not_found -> ok;
+	not_found -> 
+	    log("id nicht gefunden, ~p", [Id]),
+	    ok;
 	Pid -> gen_server:call(Pid, unsubscribe)
     end.
 
