@@ -290,8 +290,8 @@ handle_http_response(initial_get_stream, Body, State) ->
 		NSub = if
 			   length(NewContent) > 0 ->
 			       Text = lists:map(fun(Val) -> 
-							 create_prisma_message(get_id(State),
-									       proplists:get_value(title, Val))
+							create_prisma_message(list_to_binary(get_id(State)),
+									      list_to_binary(proplists:get_value(title, Val)))
 						 end, 
 						 NewContent),
 			       reply(json_eep:term_to_json(Text), State),
@@ -371,7 +371,7 @@ reply(Msg, #state{subscription = Sub}) ->
 reply(Msg, Sub) ->
     mod_prisma_aggregator:send_message(Sub#subscription.host,
 				       Sub#subscription.accessor,
-				       "message",
+				       "chat", %TODO
 				       Msg).
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
