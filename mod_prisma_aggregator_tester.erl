@@ -74,7 +74,7 @@ route(_From, To, {xmlelement, "message", _, _} = Packet) ->
 	"unsubscribe_bulk " ++ Params ->
 	    {match, [Name, Start, Stop]} = re:run(Params, "(?<Name>.+) (?<Start>.+) (?<Stop>.+)",
 						 [{capture, ['Name', 'Start', 'Stop'], list}]),
-	    unsubscribe(Name, Start, Stop),
+	    send_unsubscribe_bulk(Name, Start, Stop),
 	    ok
     end,
     ok;
@@ -192,11 +192,11 @@ map_to_n_lines(Device, Count, N, F, Acc) ->
 get_sender() ->
     jlib:string_to_jid("aggregatortester." ++ get_host()).
 
-unsubscribe(Name, Start, Stop) ->
+send_unsubscribe_bulk(Name, Start, Stop) ->
     SubList = lists:map(fun(El) ->
-			  Name ++ "-" ++ integer_to_list(El + Start)
-		  end,
-		  lists:seq(0, Stop - Start)),
+				Name ++ "-" ++ integer_to_list(El + Start)
+			end,
+			lists:seq(0, Stop - Start)),
     send_iq(get_sender(),
 	    jlib:string_to_jid("aggregator." ++ get_host()),
 	    "unsubscribe",
