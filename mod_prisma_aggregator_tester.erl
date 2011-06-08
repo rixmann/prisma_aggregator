@@ -193,6 +193,7 @@ get_sender() ->
     jlib:string_to_jid("aggregatortester." ++ get_host()).
 
 send_unsubscribe_bulk(Name, Start, Stop) ->
+    ?INFO_MSG("send_unsubscribe_bulk, params: ~p ~p ~p", [Name, Start, Stop]),
     SubList = lists:map(fun(El) ->
 				Name ++ "-" ++ integer_to_list(El + Start)
 			end,
