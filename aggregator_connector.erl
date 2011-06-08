@@ -422,7 +422,7 @@ message_to_controller(Msg, Sub) ->
     mod_prisma_aggregator:send_message(Sub#subscription.host,
 				       jlib:string_to_jid(get_controller()),
 				       "chat", %TODO
-				       Msg).
+				       json_eep:term_to_json(Msg)).
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
@@ -432,7 +432,7 @@ rebind( To, Id) ->
 	    not_found;
 	Pid -> gen_server:cast(Pid, {rebind, To})
     end.
-    
+   
 store_to_couch(Doclist ,State) ->
     Pre = doclist_to_json(Doclist),
     Jstring = json_eep:term_to_json({[{<<"docs">>, Pre}]}), 
