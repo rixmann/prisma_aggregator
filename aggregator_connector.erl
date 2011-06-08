@@ -42,6 +42,13 @@ new_subscription(Sub = #subscription{}) ->
 new_subscriptions([H = #subscription{}|T]) ->
     lists:map(new_suscription, [H|T]).
 
+
+unsubscribe(Id) ->
+    case get_pid_from_id(Id) of
+	not_found -> ok;
+	Pid -> gen_server:call(Pid, unsubscribe)
+    end.
+
 start_worker(Id) ->
     supervisor:start_child(?SUP, [Id]).
 
@@ -95,6 +102,13 @@ init([SubOrId]) ->
     ibrowse:set_max_pipeline_size(Host, Port, 1),
     {ok, #state{subscription = Subscription,
 		callbacks = Callbacks}}.
+
+handle_call(unsubscribe, _From, State) ->
+    F = fun() -> mnesia:delete(?PST, get_id(State)),
+		 mnesia:delete(?SPT, get_id(State))
+	end, 
+    mnesia:transaction(F),
+    {stop, normal, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ignored,

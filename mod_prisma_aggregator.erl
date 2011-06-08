@@ -167,6 +167,10 @@ log(Msg, Vars) ->
 handle_json_msg([H|T], _From, Type) ->
     lists:map(fun(El) -> handle_json_msg(El, _From, Type) end,
 	      [H|T]);
+
+handle_json_msg(Id, _From, "unsubscribe") ->
+    ?CONNECTOR:unsubscribe(Id);
+
 handle_json_msg(Proplist, _From, Type) ->
     case json_get_value(<<"class">>, Proplist) of
 	undefined -> log("received xmpp-json-message that has no class attribute~n~p", [Proplist]);

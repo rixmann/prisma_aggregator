@@ -70,6 +70,11 @@ route(_From, To, {xmlelement, "message", _, _} = Packet) ->
 	"subs_from_file_bulk " ++ Params ->
 	    {match, [Count, Accessor, Batchname]} = re:run(Params, "(?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Count', 'Accessor', 'Batchname'], list}]),
 	    send_subscriptions_bulk(list_to_integer(Count), Accessor, Batchname),
+	    ok;
+	"unsubscribe_bulk " ++ Params ->
+	    {match, [Name, Start, Stop]} = re:run(Params, "(?<Name>.+) (?<Start>.+) (?<Stop>.+)",
+						 [{capture, ['Name', 'Start', 'Stop'], list}]),
+	    unsubscribe(Name, Start, Stop),
 	    ok
     end,
     ok;
@@ -186,3 +191,13 @@ map_to_n_lines(Device, Count, N, F, Acc) ->
 
 get_sender() ->
     jlib:string_to_jid("aggregatortester." ++ get_host()).
+
+unsubscribe(Name, Start, Stop) ->
+    SubList = lists:map(fun(El) ->
+			  Name ++ "-" ++ integer_to_list(El + Start)
+		  end,
+		  lists:seq(0, Stop - Start)),
+    send_iq(get_sender(),
+	    jlib:string_to_jid("aggregator." ++ get_host()),
+	    "unsubscribe",
+	    json_eep:term_to_json(SubList)).
