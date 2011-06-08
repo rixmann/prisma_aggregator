@@ -289,11 +289,11 @@ handle_http_response(initial_get_stream, Body, State) ->
 		NewContent = extract_new_messages(Content, Sub),
 		NSub = if
 			   length(NewContent) > 0 ->
-			       Text = {lists:map(fun(Val) -> 
+			       Text = lists:map(fun(Val) -> 
 							 create_prisma_message(get_id(State),
 									       proplists:get_value(title, Val))
 						 end, 
-						 NewContent)},
+						 NewContent),
 			       reply(json_eep:term_to_json(Text), State),
 			       EnrichedContent = lists:map(fun([H|T]) ->
 								   [{subId, get_id(Sub)},
