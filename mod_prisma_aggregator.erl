@@ -115,7 +115,8 @@ route(From, To, {xmlelement, "iq", _, _} = Packet) ->
 		Json -> handle_json_msg(Json, From, F)
 	    end;
 	_ ->  ?INFO_MSG("Received unhandled iq~n~p -> ~p~n~p", [From, To, Packet])
-    end;
+    end,
+    ok;
 
 route(_,_,Packet) -> 
     ?INFO_MSG("received unhandled packet:~n~p~n", [Packet]),
