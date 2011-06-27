@@ -170,7 +170,7 @@ log(Msg, Vars) ->
 
 handle_json_bulk(Liste, _From, Type) when is_list(Liste) ->
     lists:map(fun(El) -> handle_json_msg(El, _From, Type) end,
-	      Liste);
+	      Liste).
 
 handle_json_msg(Id, _From, "unsubscribe") ->
     ?INFO_MSG("in handle_json_msg für einen eintrag, id: ~p", [Id]),
