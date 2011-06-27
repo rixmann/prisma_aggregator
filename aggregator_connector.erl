@@ -107,8 +107,7 @@ init([SubOrId]) ->
 		callbacks = Callbacks}}.
 
 handle_call(unsubscribe, _From, State) ->
-    F = fun() -> mnesia:delete(?PST, get_id(State)),
-		 mnesia:delete(?SPT, get_id(State))
+    F = fun() -> mnesia:delete({?PST, get_id(State)})
 	end, 
     Erg = mnesia:transaction(F),
     ?INFO_MSG("transaktionsergebnis: ~p", [Erg]),
@@ -232,7 +231,7 @@ handle_info(_Info, State) ->
 
 
 terminate(_Reason, State) ->
-    F = fun() -> mnesia:delete(?SPT, get_id(State)) end, 
+    F = fun() -> mnesia:delete({?SPT, get_id(State)}) end, 
     mnesia:transaction(F),
     ?INFO_MSG("Worker stopping, id: ~p~n", [get_id(State)]),
     ok.
