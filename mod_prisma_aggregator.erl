@@ -101,12 +101,17 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 route(From, To, {xmlelement, "iq", _, _} = Packet) ->
     Body = strip_bom(xml:get_subtag_cdata(Packet, "query")),
     case xml:get_tag_attr_s("type", Packet) of
-	F when (F =:= "subscribeAll") or 
+	F when (F =:= "subscribeBulk") or 
 	       (F =:= "subscribe") or
 	       (F =:= "unsubscribe") or
-	       (F =:= "updateSubscription") -> 
+	       (F =:= "unsubscribeBulk") or
+	       (F =:= "updateSubscription") or 
+	       (F =:= "updateSubscriptionBulk") -> 
 	    case json_eep:json_to_term(Body) of
 		{error, _Reason} -> ?INFO_MSG("received unhandled xmpp message:~n~p~nparsing error:~n~p", [Body, _Reason]);
+		Json when (F =:= "subscribeBulk") -> handle_json_bulk(Json, From, "subscribe");
+		Json when (F =:= "unsubscribeBulk") -> handle_json_bulk(Json, From, "unsubscribe");
+		Json when (F =:= "updateSubscriptionBulk")-> handle_json_bulk(Json, From, "updateSubscription");
 		Json -> handle_json_msg(Json, From, F)
 	    end;
 	_ ->  ?INFO_MSG("Received unhandled iq~n~p -> ~p~n~p", [From, To, Packet])
@@ -163,10 +168,9 @@ setup_mnesia(Name, Fun) ->
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
-handle_json_msg([H|T], _From, Type) when is_list(H) ->
-    ?INFO_MSG("in handle_json_msg für listen, Liste: ~p", [[H|T]]),
+handle_json_bulk(Liste, _From, Type) when is_list(Liste) ->
     lists:map(fun(El) -> handle_json_msg(El, _From, Type) end,
-	      [H|T]);
+	      Liste);
 
 handle_json_msg(Id, _From, "unsubscribe") ->
     ?INFO_MSG("in handle_json_msg für einen eintrag, id: ~p", [Id]),

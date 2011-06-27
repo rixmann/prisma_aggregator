@@ -155,7 +155,7 @@ send_subscriptions(Count, Accessor, Batchname) ->
 		       end,
 		send_iq(get_sender(), 
 			jlib:string_to_jid("aggregator." ++ get_host()),
-			"subscribeAll",
+			"subscribe",
 			json_eep:term_to_json(create_json_subscription(URI, Accessor, Feed, Batchname ++ "-" ++ integer_to_list(N))))
 	end,
     spawn(?MODULE, map_to_n_lines, [Device, Count, F]).
@@ -173,7 +173,7 @@ send_subscriptions_bulk(Count, Accessor, Batchname) ->
     SubList = map_to_n_lines(Device, Count, F),
     send_iq(get_sender(), 
 	    jlib:string_to_jid("aggregator." ++ get_host()),
-	    "subscribe",
+	    "subscribeBulk",
 	    json_eep:term_to_json(SubList)).
 
 map_to_n_lines(Device, N, F) ->
@@ -199,5 +199,5 @@ send_unsubscribe_bulk(Name, Start, Stop) ->
 			lists:seq(0, list_to_integer(Stop) - list_to_integer(Start))),
     send_iq(get_sender(),
 	    jlib:string_to_jid("aggregator." ++ get_host()),
-	    "unsubscribe",
+	    "unsubscribeBulk",
 	    json_eep:term_to_json(SubList)).
