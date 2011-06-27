@@ -13,11 +13,11 @@
 
 %% gen_mod implementation
 start(Host, Opts) ->
+    ?INFO_MSG("mod_prisma_aggregator starting!, module: ~p~n", [?MODULE]),
     ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?CFG,{host, Host}),
     ibrowse:start(),
     setup_mnesia(),
-    
     RandomGeneratorSpec = {?RAND,
     			   {?RAND, start_link, []},
     			   permanent,
@@ -32,13 +32,12 @@ start(Host, Opts) ->
 			supervisor,
 			[?MODULE, aggregator_connector, ?SUP]},
     supervisor:start_child(ejabberd_sup, ConnectorSupSpec),
-    ?INFO_MSG("mod_prisma_aggregator starting!, module: ~p~n", [?MODULE]),
     F = fun() -> mnesia:all_keys(?PST) end,
     {atomic, Entries} = mnesia:transaction(F),
+    log("read PST~n~p", [Entries]),
     lists:map(fun(El) ->
 		      aggregator_connector:start_worker(El)
 	      end, Entries),
-    log("read PST~n~p", [Entries]),
     MyHost = gen_mod:get_opt_host(Host, Opts, "aggregator.@HOST@"),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
     
@@ -165,10 +164,12 @@ log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
 handle_json_msg([H|T], _From, Type) ->
+    ?INFO_MSG("in handle_json_msg für listen, Liste: ~p", [H|T]),
     lists:map(fun(El) -> handle_json_msg(El, _From, Type) end,
 	      [H|T]);
 
 handle_json_msg(Id, _From, "unsubscribe") ->
+    ?INFO_MSG("in handle_json_msg für einen eintrag, id: ~p", [Id]),
     ?CONNECTOR:unsubscribe(Id);
 
 handle_json_msg(Proplist, _From, Type) ->
