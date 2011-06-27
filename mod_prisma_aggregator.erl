@@ -164,7 +164,7 @@ log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
 handle_json_msg([H|T], _From, Type) when is_list(H) ->
-    ?INFO_MSG("in handle_json_msg für listen, Liste: ~p", [H|T]),
+    ?INFO_MSG("in handle_json_msg für listen, Liste: ~p", [[H|T]]),
     lists:map(fun(El) -> handle_json_msg(El, _From, Type) end,
 	      [H|T]);
 
