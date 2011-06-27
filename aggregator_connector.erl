@@ -1,4 +1,4 @@
-%%%-------------------------------------------------------------------
+%%-------------------------------------------------------------------
 %%% File    : aggregator_connector.erl
 %%% Author  : Ole Rixmann <rixmann.ole@googlemail.com>
 %%% Description : 
@@ -48,7 +48,7 @@ unsubscribe(Id) ->
     case get_pid_from_id(Id) of
 	not_found -> 
 	    log("id nicht gefunden, ~p", [Id]),
-	    ok;
+	    not_found;
 	Pid -> gen_server:call(Pid, unsubscribe)
     end.
 
@@ -111,7 +111,7 @@ handle_call(unsubscribe, _From, State) ->
 		 mnesia:delete(?SPT, get_id(State))
 	end, 
     mnesia:transaction(F),
-    {stop, normal, State};
+    {stop, normal, unsubscribed, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ignored,
