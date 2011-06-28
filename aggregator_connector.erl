@@ -142,7 +142,7 @@ handle_cast(go_get_messages, State) ->
 						      -2,
 						      <<"To many Http-Requests, system overloaded">>),
 				  Sub),
-	    callbacktimer(5, go_get_messages);
+	    callbacktimer(100, go_get_messages);
 	{error, req_timedout} -> 
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
