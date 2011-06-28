@@ -75,7 +75,10 @@ route(_From, To, {xmlelement, "message", _, _} = Packet) ->
 	    {match, [Name, Start, Stop]} = re:run(Params, "(?<Name>.+) (?<Start>.+) (?<Stop>.+)",
 						 [{capture, ['Name', 'Start', 'Stop'], list}]),
 	    send_unsubscribe_bulk(Name, Start, Stop),
-	    ok
+	    ok;
+	"updateSubscription " ++ Params ->
+	    {match, [Url, Accessor, Feed, Name]} = re:run(Params, "(?<Url>.+) (?<Accessor>.+) (?<Feed>.+) (?<Name>.+)", [{capture, ['Url', 'Accessor', 'Feed', 'Name'], list}]),
+	    send_update_subscription(Url, Accessor, Feed, Name)
     end,
     ok;
 
@@ -201,3 +204,9 @@ send_unsubscribe_bulk(Name, Start, Stop) ->
 	    jlib:string_to_jid("aggregator." ++ get_host()),
 	    "unsubscribeBulk",
 	    json_eep:term_to_json(SubList)).
+
+send_update_subscription(Url, Accessor, Feed, Name) ->
+    send_iq(get_sender(), 
+	    jlib:string_to_jid("aggregator." ++ get_host()),
+	    "updateSubscription",
+	    json_eep:term_to_json(create_json_subscription(Url, Accessor, Feed, Name))).

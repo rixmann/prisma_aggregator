@@ -511,7 +511,7 @@ create_prisma_message(SubId, Content) ->
 	  {<<"id">>,null}]}]},
       {<<"priority">>,null},
       {<<"publicationDate">>,null},
-      {<<"receivingDate">>,null},
+      {<<"receivingDate">>, list_to_binary(format_date())},
       {<<"recipient">>,null},
       {<<"sender">>,null},
       {<<"subscriptionID">>,SubId},
