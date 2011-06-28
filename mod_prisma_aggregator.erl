@@ -177,9 +177,37 @@ handle_json_bulk(Liste, _From, Type) when is_list(Liste) ->
 handle_json_msg(Id, _From, "unsubscribe") ->
     ?CONNECTOR:unsubscribe(Id);
 
-handle_json_msg(Proplist, _From, Type) ->
+handle_json_msg(Sub, _From, "updateSubscription") ->
+    case parse_subscription(Sub) of
+	wrong_class -> not_handled;
+	invalid -> not_handled;
+	Proplist ->
+	    GV = fun(Key) -> proplists:get_value(Key, Proplist) end,
+	    ?CONNECTOR:new_subscription(#subscription{id = binary_to_list(GV(subId)), 
+						      url = GV(url), 
+						      source_type = binary_to_list(GV(sourceType)), 
+						      accessor = jlib:string_to_jid(binary_to_list(GV(accessor))),
+						      host = jlib:string_to_jid("aggregator." ++ get_host())}),	    
+	    ok
+    end;
+
+handle_json_msg(Sub, _From, "subscribe") ->
+    case parse_subscription(Sub) of
+	wrong_class -> not_handled;
+	invalid -> not_handled;
+	Proplist ->
+	    GV = fun(Key) -> proplists:get_value(Key, Proplist) end,
+	    ?CONNECTOR:new_subscription(#subscription{id = binary_to_list(GV(subId)), 
+						      url = GV(url), 
+						      source_type = binary_to_list(GV(sourceType)), 
+						      accessor = jlib:string_to_jid(binary_to_list(GV(accessor))),
+						      host = jlib:string_to_jid("aggregator." ++ get_host())}),	    
+	    ok
+    end.
+
+parse_subscription(Proplist) -> %ist keine proplist sondern json-objekt -> {Proplist}
     case json_get_value(<<"class">>, Proplist) of
-	undefined -> log("received xmpp-json-message that has no class attribute~n~p", [Proplist]);
+	undefined -> wrong_class;
 	<<"de.prisma.datamodel.subscription.Subscription">> ->
 	    SubscriptionId = json_get_value(<<"subscriptionID">>, Proplist),
 	    Accessor = json_get_value(<<"accessor">>, Proplist),
@@ -194,15 +222,13 @@ handle_json_msg(Proplist, _From, Type) ->
 			end
 		end,
 	    Url = lists:flatten(lists:map(F, AccessParameters)),
-	    ?CONNECTOR:new_subscription(#subscription{id = binary_to_list(SubscriptionId), 
-						      url = Url, 
-						      source_type = binary_to_list(SourceType), 
-						      accessor = jlib:string_to_jid(binary_to_list(Accessor)),
-						      host = jlib:string_to_jid("aggregator." ++ get_host())}),
-	    ok;
-	_ -> not_handled	    
+	    [{subId, SubscriptionId},
+	     {accessor, Accessor},
+	     {sourceType, SourceType},
+	     {url, Url}];
+	_ -> invalid	    
     end.
-
+  
 json_get_value([H|T], JsonObj) ->
     json_get_value(T,json_get_value(H, JsonObj));
 json_get_value([],JsonObj) -> JsonObj;

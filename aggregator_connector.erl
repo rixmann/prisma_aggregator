@@ -109,8 +109,7 @@ init([SubOrId]) ->
 handle_call(unsubscribe, _From, State) ->
     F = fun() -> mnesia:delete({?PST, get_id(State)})
 	end, 
-    Erg = mnesia:transaction(F),
-    ?INFO_MSG("transaktionsergebnis: ~p", [Erg]),
+    {atomic, ok} = mnesia:transaction(F),
     {stop, normal, unsubscribed, State};
 
 handle_call(_Request, _From, State) ->
