@@ -138,10 +138,10 @@ handle_cast(go_get_messages, State) ->
 	{ibrowse_req_id, RequestId} ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
 	{error, retry_later} -> 
-	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
-						      -2,
-						      <<"To many Http-Requests, system overloaded">>),
-				  Sub),
+	    %message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+	%					      -2,
+	%					      <<"To many Http-Requests, system overloaded">>),
+	%			  Sub),
 	    callbacktimer(100, go_get_messages);
 	{error, req_timedout} -> 
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
