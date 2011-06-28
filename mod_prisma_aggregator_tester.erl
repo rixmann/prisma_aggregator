@@ -76,7 +76,7 @@ route(_From, To, {xmlelement, "message", _, _} = Packet) ->
 						 [{capture, ['Name', 'Start', 'Stop'], list}]),
 	    send_unsubscribe_bulk(Name, Start, Stop),
 	    ok;
-	"updateSubscription " ++ Params ->
+	"update_subscription " ++ Params ->
 	    {match, [Url, Accessor, Feed, Name]} = re:run(Params, "(?<Url>.+) (?<Accessor>.+) (?<Feed>.+) (?<Name>.+)", [{capture, ['Url', 'Accessor', 'Feed', 'Name'], list}]),
 	    send_update_subscription(Url, Accessor, Feed, Name)
     end,
