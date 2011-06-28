@@ -79,6 +79,10 @@ rebind_all(To) ->
     Ids = mnesia:dirty_all_keys(?PST),
     lists:map(fun(Id) -> rebind(To, Id) end, Ids).
 
+update_subscription(Sub = #subscription{id = Id}) ->
+    Pid = get_pid_from_id(Id),
+    gen_server:cast(Pid, {update_subscription, Sub}).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -116,6 +120,12 @@ handle_call(_Request, _From, State) ->
     Reply = ignored,
     log("Ignored call~n~p", [{_Request, _From, State}]),
     {reply, Reply, State}.
+
+handle_cast({update_subscription, NSub = #subscription{}}, State = #state{subscription = OSub}) ->
+    Keys = OSub#subscription.last_msg_key,
+    NNSub = NSub#subscription{last_msg_key = Keys},
+    ok = mnesia:dirty_write(?PST, NNSub),
+    {noreply, State#state{subscription=NNSub}};
 
 handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
     Nsub = Sub#subscription{accessor = To},
@@ -210,7 +220,7 @@ handle_info({ibrowse_async_response_end, ReqId} , State) ->
 handle_info({'EXIT', _Reason, normal}, State) -> %timer process died
     {noreply, State};
 
-handle_info({Ref, {error, _}} = F, State) ->
+handle_info({_Ref, {error, _}} = F, State) ->
 						%Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
 						%log("handle info on ~p, error:~n~p anzahl callbacks:~n~p", [get_id(State), F, Content]),
     
@@ -338,12 +348,13 @@ handle_http_response(initial_get_stream, Body, State) ->
 		NewContent = extract_new_messages(Content, Sub),
 		NSub = if
 			   length(NewContent) > 0 ->
-			       Text = lists:map(fun(Val) -> 
-							create_prisma_message(list_to_binary(get_id(State)),
-									      list_to_binary(proplists:get_value(title, Val)))
-						 end, 
-						 NewContent),
-			       message_to_accessor(json_eep:term_to_json(Text), State),
+			       lists:map(fun(Val) -> 
+						 message_to_accessor(json_eep:term_to_json(
+								       create_prisma_message(list_to_binary(get_id(State)),
+											     list_to_binary(proplists:get_value(title, Val)))),
+								     State)
+					 end, 
+					 NewContent),
 			       EnrichedContent = lists:map(fun([H|T]) ->
 								   [{subId, get_id(Sub)},
 								    {feed, Sub#subscription.source_type},

@@ -183,7 +183,7 @@ handle_json_msg(Sub, _From, "updateSubscription") ->
 	invalid -> not_handled;
 	Proplist ->
 	    GV = fun(Key) -> proplists:get_value(Key, Proplist) end,
-	    ?CONNECTOR:new_subscription(#subscription{id = binary_to_list(GV(subId)), 
+	    ?CONNECTOR:update_subscription(#subscription{id = binary_to_list(GV(subId)), 
 						      url = GV(url), 
 						      source_type = binary_to_list(GV(sourceType)), 
 						      accessor = jlib:string_to_jid(binary_to_list(GV(accessor))),
