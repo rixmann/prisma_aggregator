@@ -13,7 +13,7 @@
 
 %% gen_mod implementation
 start(Host, Opts) ->
-    ?INFO_MSG("mod_prisma_aggregator starting!, options:~n~p", [?Opts]),
+    ?INFO_MSG("mod_prisma_aggregator starting!, options:~n~p", [Opts]),
     ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?CFG,{host, Host}),
     ibrowse:start(),
