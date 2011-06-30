@@ -16,6 +16,13 @@ start(Host, Opts) ->
     ?INFO_MSG("mod_prisma_aggregator starting!, options:~n~p", [Opts]),
     ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?CFG,{host, Host}),
+    [Accessor, Coordinator, DebugLvl, Polltime] = %read config and store values in ?CFG ets, local config may be found in gen_server's Status
+	lists:map(fun(El) -> 
+			  Ret = proplists:get_value(El, Opts),
+			  ets:insert(?CFG, {El, Ret}),
+			  Ret
+		  end, 
+		  [accessor, coordinator, debugLvl, polltime]),
     ibrowse:start(),
     setup_mnesia(),
     RandomGeneratorSpec = {?RAND,
@@ -187,7 +194,7 @@ handle_json_msg(Sub, _From, "updateSubscription") ->
 						      url = GV(url), 
 						      source_type = binary_to_list(GV(sourceType)), 
 						      accessor = jlib:string_to_jid(binary_to_list(GV(accessor))),
-						      host = jlib:string_to_jid("aggregator." ++ get_host())}),	    
+						      host = jlib:string_to_jid("aggregator." ++ agr:get_host())}),	    
 	    ok
     end;
 
@@ -201,7 +208,7 @@ handle_json_msg(Sub, _From, "subscribe") ->
 						      url = GV(url), 
 						      source_type = binary_to_list(GV(sourceType)), 
 						      accessor = jlib:string_to_jid(binary_to_list(GV(accessor))),
-						      host = jlib:string_to_jid("aggregator." ++ get_host())}),	    
+						      host = jlib:string_to_jid("aggregator." ++ agr:get_host())}),	    
 	    ok
     end.
 
@@ -235,6 +242,3 @@ json_get_value([],JsonObj) -> JsonObj;
 json_get_value(Key, {JsonObj}) ->
     proplists:get_value(Key, JsonObj).
 
-get_host() ->
-    [{host, Ret}] = ets:lookup(?CFG, host),
-    Ret.

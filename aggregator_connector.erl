@@ -393,7 +393,7 @@ handle_http_response(_, {error, _Reason}, State) ->
     callbacktimer(?POLLTIME, go_get_messages),
     {noreply,State}.
 
-extract_new_messages(Content, #subscription{last_msg_key = KnownKeys}) ->
+extract_new_messages(Messages, #subscription{last_msg_key = KnownKeys}) ->
     F = fun(El) ->  fun(Key) -> 
 			    Key =:= select_key(El)
 		    end
@@ -401,7 +401,7 @@ extract_new_messages(Content, #subscription{last_msg_key = KnownKeys}) ->
     lists:takewhile(fun(El) -> 
 			    not(lists:any(F(El), KnownKeys)) 
 		    end, 
-		    Content).
+		    Messages).
 
 merge_keys(Items, OldKeys) ->
     merge_keys(Items, OldKeys, 3).
@@ -524,9 +524,5 @@ create_prisma_error(SubId, Type, Desc) ->
       {<<"errorDescription">>, Desc}]}.
 
 get_controller() ->
-    %"aggregatortester." ++ get_host().
-    "admin@" ++ get_host().
-
-get_host() ->
-    [{host, Ret}] = ets:lookup(?CFG, host),
-    Ret.
+    %"aggregatortester." ++ agr:get_host().
+    "admin@" ++ agr:get_host().
