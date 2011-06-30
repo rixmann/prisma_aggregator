@@ -76,7 +76,7 @@ handle_cast(httpc_overload_end, State = #state{httpc_overload = Old}) ->
     {noreply, State#state{httpc_overload = false}};
 
 handle_cast(collect_stats, State = #state{device = Dev}) ->
-    io:write(Dev, agr:format_date()),
+    io:format(Dev,"~p", [agr:format_date()]),
     agr:callbacktimer(100, collect_stats),
     {noreply, State};
 
