@@ -8,7 +8,6 @@
 -module(aggregator_connector).
 
 -behaviour(gen_server).
--define(POLLTIME, 60000).
 -define(POLL_TIMEOUT, 30000).
 
 %% API
@@ -103,7 +102,7 @@ init([SubOrId]) ->
 		 end
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
-    callbacktimer(random, go_get_messages, 5000),
+    agr:callbacktimer(random, go_get_messages, 5000),
     Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
     ibrowse:set_max_pipeline_size(Host, Port, 1),
@@ -142,39 +141,39 @@ handle_cast(go_get_messages, State) ->
 	%					      -2,
 	%					      <<"To many Http-Requests, system overloaded">>),
 	%			  Sub),
-	    callbacktimer(100, go_get_messages);
+	    agr:callbacktimer(100, go_get_messages);
 	{error, req_timedout} -> 
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, timeout">>),
 				  Sub),
-	    callbacktimer(?POLLTIME, go_get_messages);
+	    agr:callbacktimer(?POLLTIME, go_get_messages);
 	{error, {conn_failed, {error, timeout}}} -> 
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, connection failed -> timeout">>),
 				  Sub),
-	    callbacktimer(?POLLTIME, go_get_messages);
+	    agr:callbacktimer(?POLLTIME, go_get_messages);
 	{error, {conn_failed, {error, _}}} -> 
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, connection failed">>),
 				  Sub),
-	    callbacktimer(random, go_get_messages, 10 * ?POLLTIME);
+	    agr:callbacktimer(random, go_get_messages, 10 * ?POLLTIME);
 	{error, _Reason} ->
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, undefinded">>),
 				  Sub),
 						%	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
-	    callbacktimer(random, go_get_messages);
-	{'EXIT', _} -> callbacktimer(5, go_get_messages);
+	    agr:callbacktimer(random, go_get_messages);
+	{'EXIT', _} -> agr:callbacktimer(5, go_get_messages);
 	Val -> log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
 	       message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 							 -2,
 							 <<"Network error, undefinded">>),
 				     Sub),
-	       callbacktimer(5, go_get_messages)
+	       agr:callbacktimer(5, go_get_messages)
     end,
     {noreply, State};
 
@@ -210,7 +209,7 @@ handle_info({ibrowse_async_response_end, ReqId} , State) ->
 	    handle_http_response(Hook, Content, State);
 	[] -> 
 	    log("~p didn't find req-id in callbacks for http-end", [get_id(State)]),
-	    callbacktimer(?POLLTIME, go_get_messages),
+	    agr:callbacktimer(?POLLTIME, go_get_messages),
 	    {noreply, State};
 	Val -> 
 	    log("ets-lookup really went wrong on worker ~p~n~p", [get_id(State), Val]),
@@ -229,7 +228,7 @@ handle_info({_Ref, {error, _}} = F, State) ->
 					      -2,
 					      <<"Network error, undefinded">>),
 			  State),
-    callbacktimer(random, go_get_messages, 10 * ?POLLTIME),
+    agr:callbacktimer(random, go_get_messages, 10 * ?POLLTIME),
     {noreply, State};
 
 handle_info(_Info, State) ->
@@ -336,7 +335,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 						      -1,
 						      <<"Stream returned invalid XML">>),
 				  Sub),
-	    callbacktimer(?POLLTIME, go_get_messages),
+	    agr:callbacktimer(?POLLTIME, go_get_messages),
 	    {noreply, State};
 	Xml ->
 	    try
@@ -358,7 +357,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 			       EnrichedContent = lists:map(fun([H|T]) ->
 								   [{subId, get_id(Sub)},
 								    {feed, Sub#subscription.source_type},
-								    {date, format_date()},
+								    {date, agr:format_date()},
 								    H | T]
 							   end, NewContent),
 			       ok = store_to_couch(EnrichedContent, State),
@@ -367,7 +366,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 			       StoreSub;
 			   true -> Sub
 		       end,
-		callbacktimer(?POLLTIME, go_get_messages),
+		agr:callbacktimer(?POLLTIME, go_get_messages),
 		{noreply, State#state{subscription = NSub}}
 	    catch
 		_Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
@@ -375,7 +374,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 							      -1,
 							      <<"Error while trying to interpret XML">>),
 					  Sub),
-		    callbacktimer(?POLLTIME, go_get_messages),
+		    agr:callbacktimer(?POLLTIME, go_get_messages),
 		    {noreply, State}
 	    end
     end;
@@ -390,7 +389,7 @@ handle_http_response(_, {error, _Reason}, State) ->
 					      -2,
 					      list_to_binary(_Reason)),
 			  State),
-    callbacktimer(?POLLTIME, go_get_messages),
+    agr:callbacktimer(?POLLTIME, go_get_messages),
     {noreply,State}.
 
 extract_new_messages(Messages, #subscription{last_msg_key = KnownKeys}) ->
@@ -410,21 +409,6 @@ merge_keys(Items, OldKeys, N) ->
 	      lists:sublist(lists:append(lists:sublist(Items, N), OldKeys),
 			    N)).
 		 
-callbacktimer(random, Callback, Offset) ->
-    RandomCallbackTime = ?RAND:uniform([?POLLTIME]),
-    callbacktimer(RandomCallbackTime + Offset, Callback).
-
-callbacktimer(random, Callback) ->
-    callbacktimer(random, Callback, 0);
-callbacktimer(Time, Callback) ->
-    Caller = self(),
-    F = fun() ->
-		receive
-		after Time ->
-			gen_server:cast(Caller, Callback)
-		end
-	end,
-    spawn(F).
 
 get_id(#subscription{id = Id}) ->
     Id;
@@ -485,10 +469,6 @@ doclist_to_json(Doclist) ->
 	      end, 
 	      Doclist).
 
-format_date() -> 
-    {{Y, M, D}, {H, Min, S}} = erlang:localtime(), 
-    F = fun(El) -> integer_to_list(El) end, 
-    F(Y) ++ "-" ++ F(M) ++ "-" ++ F(D) ++ "-"++	F(H) ++ "-" ++ F(Min) ++ "-" ++ F(S).
 
 get_host_and_port_from_url(Url) ->
     case re:run(Url, "http://(?<Server>[^/:]+)(?:.?(?<=:)(?<Port>[0-9]+).*|.*)", [{capture, ['Server', 'Port'], list}]) of
@@ -511,7 +491,7 @@ create_prisma_message(SubId, Content) ->
 	  {<<"id">>,null}]}]},
       {<<"priority">>,null},
       {<<"publicationDate">>,null},
-      {<<"receivingDate">>, list_to_binary(format_date())},
+      {<<"receivingDate">>, list_to_binary(agr:format_date())},
       {<<"recipient">>,null},
       {<<"sender">>,null},
       {<<"subscriptionID">>,SubId},

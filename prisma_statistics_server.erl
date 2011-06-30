@@ -3,11 +3,15 @@
 %%% Author  : Ole Rixmann <ole@kiiiiste>
 %%% Description : 
 %%%
-%%% Created : 30 Jun 2011 by Gu Lagong <ole@kiiiiste>
+%%% Created : 30 Jun 2011 by Ole Rixmann <ole@kiiiiste>
 %%%-------------------------------------------------------------------
 -module(prisma_statistics_server).
 
+
+
 -behaviour(gen_server).
+
+-include("prisma_aggregator.hrl").
 
 %% API
 -export([start_link/0]).
@@ -16,7 +20,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
 
--record(state, {}).
+-record(state, {httpc_overload = false, device}).
 
 %%====================================================================
 %% API
@@ -26,8 +30,10 @@
 %% Description: Starts the server
 %%--------------------------------------------------------------------
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+signal_httpc_overload() ->
+    gen_server:cast(?MODULE, httpc_overload).
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -40,7 +46,9 @@ start_link() ->
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
 init([]) ->
-    {ok, #state{}}.
+    {ok, Device} = file:open("/var/log/ejabberd/runtimestats.dat", write),
+    agr:callbacktimer(1, collect_stats),
+    {ok, #state{device = Device}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -61,6 +69,17 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast(httpc_overload, State = #state{httpc_overload = Old, device = Dev}) ->
+    {noreply, State#state{httpc_overload = true}};
+
+handle_cast(httpc_overload_end, State = #state{httpc_overload = Old}) ->
+    {noreply, State#state{httpc_overload = false}};
+
+handle_cast(collect_stats, State = #state{device = Dev}) ->
+    io:write(Dev, agr:format_date()),
+    agr:callbacktimer(100, collect_stats),
+    {noreply, State};
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -80,7 +99,8 @@ handle_info(_Info, State) ->
 %% cleaning up. When it returns, the gen_server terminates with Reason.
 %% The return value is ignored.
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(_Reason, _State = #state{device = Dev}) ->
+    file:close(Dev),
     ok.
 
 %%--------------------------------------------------------------------
@@ -94,4 +114,3 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 
--module(prisma_statistics_server).
