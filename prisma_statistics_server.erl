@@ -20,7 +20,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
 
--record(state, {httpc_overload = false, device}).
+-record(state, {httpc_overload = false, device, timestamp_offset, old_load = 0}).
 
 %%====================================================================
 %% API
@@ -46,9 +46,10 @@ signal_httpc_overload() ->
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
 init([]) ->
+    ok = file:delete("/var/log/ejabberd/runtimestats.dat"),
     {ok, Device} = file:open("/var/log/ejabberd/runtimestats.dat", write),
     agr:callbacktimer(1, collect_stats),
-    {ok, #state{device = Device}}.
+    {ok, #state{device = Device, timestamp_offset = agr:get_timestamp()}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -75,10 +76,22 @@ handle_cast(httpc_overload, State = #state{httpc_overload = Old, device = Dev}) 
 handle_cast(httpc_overload_end, State = #state{httpc_overload = Old}) ->
     {noreply, State#state{httpc_overload = false}};
 
-handle_cast(collect_stats, State = #state{device = Dev}) ->
-    io:format(Dev,"~p", [agr:format_date()]),
+handle_cast(collect_stats, State = #state{device = Dev, 
+					  timestamp_offset = To, 
+					  httpc_overload = Httpc_overload,
+					  old_load = Oload}) ->
+    {_, Runtime} = statistics(runtime),
+    Nload = trunc(Oload * 0.8 + Runtime * 0.2),       %processor load is smoothened
+    io:format(Dev,                                    %add a line to runtimestats.dat
+	      "~-10w ~-15w ~-15w ~-15w~n",
+	      [(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
+	       statistics(run_queue),                 %processes ready to run	
+	       Nload,                                 %precent cpu usage 100% ~ 1 core
+	       if Httpc_overload -> 100;
+		  true -> 0
+	       end]),
     agr:callbacktimer(100, collect_stats),
-    {noreply, State};
+    {noreply, State#state{old_load = Nload}};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.

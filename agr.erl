@@ -3,7 +3,7 @@
 -include("prisma_aggregator.hrl").
 
 -export([get_host/0, callbacktimer/2, callbacktimer/3,
-	 format_date/0]).
+	 format_date/0, get_timestamp/0]).
 
 get_host() ->
     [{host, Ret}] = ets:lookup(?CFG, host),
@@ -29,3 +29,7 @@ format_date() ->
     {{Y, M, D}, {H, Min, S}} = erlang:localtime(), 
     F = fun(El) -> integer_to_list(El) end, 
     F(Y) ++ "-" ++ F(M) ++ "-" ++ F(D) ++ "-"++	F(H) ++ "-" ++ F(Min) ++ "-" ++ F(S).
+
+get_timestamp() ->
+        {Mega,Sec,Micro} = erlang:now(),
+        (Mega*1000000+Sec)*1000000+Micro.
