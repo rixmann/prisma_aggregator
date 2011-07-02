@@ -106,6 +106,7 @@ init([SubOrId]) ->
     Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
     ibrowse:set_max_pipeline_size(Host, Port, 1),
+    prisma_statistics_server:subscription_add(),
     {ok, #state{subscription = Subscription,
 		callbacks = Callbacks}}.
 
@@ -135,8 +136,10 @@ handle_cast(go_get_messages, State) ->
     Sub = State#state.subscription,
     case catch ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLL_TIMEOUT) of
 	{ibrowse_req_id, RequestId} ->
+	    prisma_statistics_server:signal_httpc_ok(),
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
 	{error, retry_later} -> 
+	    prisma_statistics_server:signal_httpc_overload(),
 	    %message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 	%					      -2,
 	%					      <<"To many Http-Requests, system overloaded">>),
@@ -241,6 +244,7 @@ handle_info(_Info, State) ->
 terminate(_Reason, State) ->
     F = fun() -> mnesia:delete({?SPT, get_id(State)}) end, 
     mnesia:transaction(F),
+    prisma_statistics_server:subscription_remove(),
     ?INFO_MSG("Worker stopping, id: ~p~n", [get_id(State)]),
     ok.
 
@@ -430,10 +434,10 @@ message_to_controller(Msg, #state{subscription = Sub}) ->
     message_to_controller(Msg, Sub);
 
 message_to_controller(Msg, Sub) ->
-    mod_prisma_aggregator:send_message(Sub#subscription.host,
-				       jlib:string_to_jid(get_controller()),
-				       "chat", %TODO
-				       json_eep:term_to_json(Msg)).
+    catch mod_prisma_aggregator:send_message(Sub#subscription.host,
+					     jlib:string_to_jid(get_controller()),
+					     "chat", %TODO
+					     json_eep:term_to_json(Msg)).
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 

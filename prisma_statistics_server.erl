@@ -18,9 +18,17 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3]).
+	 terminate/2, code_change/3, signal_httpc_ok/0]).
 
--record(state, {httpc_overload = false, device, timestamp_offset, old_load = 0}).
+-export([signal_httpc_ok/0, signal_httpc_overload/0,
+	subscription_add/0, subscription_remove/0]).
+
+-record(state, {httpc_overload = false, 
+		device, 
+		timestamp_offset, 
+		old_load = 0,
+		subscription_count = 0,
+		proceeded_subs}).
 
 %%====================================================================
 %% API
@@ -34,6 +42,16 @@ start_link() ->
 
 signal_httpc_overload() ->
     gen_server:cast(?MODULE, httpc_overload).
+
+signal_httpc_ok() ->
+    gen_server:cast(?MODULE, httpc_ok).
+
+subscription_add() ->
+    gen_server:cast(?MODULE, subscription_add).
+
+subscription_remove() ->
+    gen_server:cast(?MODULE, subscription_rem).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -49,7 +67,10 @@ init([]) ->
     ok = file:delete("/var/log/ejabberd/runtimestats.dat"),
     {ok, Device} = file:open("/var/log/ejabberd/runtimestats.dat", write),
     agr:callbacktimer(1, collect_stats),
-    {ok, #state{device = Device, timestamp_offset = agr:get_timestamp()}}.
+    {ok, #state{device = Device, 
+		timestamp_offset = agr:get_timestamp(),
+		subscription_count = 0,
+		proceeded_subs = 0}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -70,28 +91,42 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast(subscription_rem, State = #state{subscription_count = Count}) ->
+    {noreply, State#state{subscription_count = Count - 1}};
+
+handle_cast(subscription_add, State = #state{subscription_count = Count}) ->
+    {noreply, State#state{subscription_count = Count + 1}};
+
 handle_cast(httpc_overload, State = #state{httpc_overload = Old, device = Dev}) ->
     {noreply, State#state{httpc_overload = true}};
 
-handle_cast(httpc_overload_end, State = #state{httpc_overload = Old}) ->
-    {noreply, State#state{httpc_overload = false}};
+handle_cast(httpc_ok, State = #state{httpc_overload = Old, proceeded_subs = Psubs}) ->
+    {noreply, State#state{httpc_overload = false,
+			  proceeded_subs = Psubs + 1}};
 
 handle_cast(collect_stats, State = #state{device = Dev, 
 					  timestamp_offset = To, 
 					  httpc_overload = Httpc_overload,
-					  old_load = Oload}) ->
+					  old_load = Oload,
+					  subscription_count = SubCnt,
+					  proceeded_subs = Psubs}) ->
     {_, Runtime} = statistics(runtime),
-    Nload = trunc(Oload * 0.8 + Runtime * 0.2),       %processor load is smoothened
+    {_, Walltime} = statistics(wall_clock),
+    Nload = trunc(Oload * 0.9 + Runtime * 0.1),       %processor load is smoothened
     io:format(Dev,                                    %add a line to runtimestats.dat
-	      "~-10w ~-15w ~-15w ~-15w~n",
+	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
 	      [(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
 	       statistics(run_queue),                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
-	       if Httpc_overload -> 100;
+	       if Httpc_overload -> 500;
 		  true -> 0
-	       end]),
+	       end,
+	       SubCnt div 100,
+	       trunc(Psubs / (Walltime / 1000)),
+	       list_to_integer(string:substr(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz="), 2, length(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz=")) -2)) div (1024 * 10)]),
     agr:callbacktimer(100, collect_stats),
-    {noreply, State#state{old_load = Nload}};
+    {noreply, State#state{old_load = Nload,
+			  proceeded_subs = 0}};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
