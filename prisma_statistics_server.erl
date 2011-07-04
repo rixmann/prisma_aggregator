@@ -123,7 +123,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 	      [(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
 	       statistics(run_queue),                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
-	       if Httpc_overload -> 500;
+	       if Httpc_overload -> 100;
 		  true -> 0
 	       end,
 	       SubCnt div 100,
