@@ -131,7 +131,8 @@ handle_cast(collect_stats, State = #state{device = Dev,
 	       list_to_integer(string:substr(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz="), 2, length(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz=")) -2)) div (1024 * 10)]),
     agr:callbacktimer(100, collect_stats),
     {noreply, State#state{old_load = Nload,
-			  proceeded_subs = 0}};
+			  proceeded_subs = 0,
+			  proceeded_subs_old = NPsubs}};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
