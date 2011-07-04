@@ -28,7 +28,8 @@
 		timestamp_offset, 
 		old_load = 0,
 		subscription_count = 0,
-		proceeded_subs}).
+		proceeded_subs,
+		proceeded_subs_old}).
 
 %%====================================================================
 %% API
@@ -70,7 +71,8 @@ init([]) ->
     {ok, #state{device = Device, 
 		timestamp_offset = agr:get_timestamp(),
 		subscription_count = 0,
-		proceeded_subs = 0}}.
+		proceeded_subs = 0,
+		proceeded_subs_old = 0}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -109,10 +111,13 @@ handle_cast(collect_stats, State = #state{device = Dev,
 					  httpc_overload = Httpc_overload,
 					  old_load = Oload,
 					  subscription_count = SubCnt,
-					  proceeded_subs = Psubs}) ->
+					  proceeded_subs = Psubs,
+					  proceeded_subs_old = Psubs_old}) ->
     {_, Runtime} = statistics(runtime),
     {_, Walltime} = statistics(wall_clock),
     Nload = trunc(Oload * 0.9 + Runtime * 0.1),       %processor load is smoothened
+    Psubs_sec = trunc(Psubs / (Walltime / 1000)),
+    NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
 	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
 	      [(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
@@ -122,7 +127,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 		  true -> 0
 	       end,
 	       SubCnt div 100,
-	       trunc(Psubs / (Walltime / 1000)),
+	       NPsubs,
 	       list_to_integer(string:substr(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz="), 2, length(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz=")) -2)) div (1024 * 10)]),
     agr:callbacktimer(100, collect_stats),
     {noreply, State#state{old_load = Nload,
