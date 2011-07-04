@@ -23,8 +23,7 @@
 
 -record(state, 
 	{subscription = #subscription{},
-	 callbacks = ets:new(callbacks, []),
-	 http_req_handler}).
+	 callbacks = ets:new(callbacks, [])}).
 
 %%====================================================================
 %% API
@@ -77,6 +76,14 @@ stop_all_and_delete_mnesia() ->
 rebind_all(To) ->
     Ids = mnesia:dirty_all_keys(?PST),
     lists:map(fun(Id) -> rebind(To, Id) end, Ids).
+
+rebind( To, Id) ->
+    case get_pid_from_id(Id) of
+	not_found ->
+	    not_found;
+	Pid -> gen_server:cast(Pid, {rebind, To})
+    end.
+
 
 update_subscription(Sub = #subscription{id = Id}) ->
     Pid = get_pid_from_id(Id),
@@ -441,12 +448,6 @@ message_to_controller(Msg, Sub) ->
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).
 
-rebind( To, Id) ->
-    case get_pid_from_id(Id) of
-	not_found ->
-	    not_found;
-	Pid -> gen_server:cast(Pid, {rebind, To})
-    end.
    
 store_to_couch(Doclist ,State) ->
     Pre = doclist_to_json(Doclist),
