@@ -157,19 +157,19 @@ handle_cast(go_get_messages, State) ->
 						      -2,
 						      <<"Network error, timeout">>),
 				  Sub),
-	    agr:callbacktimer(?POLLTIME, go_get_messages);
+	    agr:callbacktimer(get_polltime(State), go_get_messages);
 	{error, {conn_failed, {error, timeout}}} -> 
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, connection failed -> timeout">>),
 				  Sub),
-	    agr:callbacktimer(?POLLTIME, go_get_messages);
+	    agr:callbacktimer(get_polltime(State), go_get_messages);
 	{error, {conn_failed, {error, _}}} -> 
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, connection failed">>),
 				  Sub),
-	    agr:callbacktimer(random, go_get_messages, 10 * ?POLLTIME);
+	    agr:callbacktimer(random, go_get_messages, 10 * get_polltime(State));
 	{error, _Reason} ->
 	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
@@ -219,7 +219,7 @@ handle_info({ibrowse_async_response_end, ReqId} , State) ->
 	    handle_http_response(Hook, Content, State);
 	[] -> 
 	    log("~p didn't find req-id in callbacks for http-end", [get_id(State)]),
-	    agr:callbacktimer(?POLLTIME, go_get_messages),
+	    agr:callbacktimer(get_polltime(State), go_get_messages),
 	    {noreply, State};
 	Val -> 
 	    log("ets-lookup really went wrong on worker ~p~n~p", [get_id(State), Val]),
@@ -238,7 +238,7 @@ handle_info({_Ref, {error, _}} = F, State) ->
 					      -2,
 					      <<"Network error, undefinded">>),
 			  State),
-    agr:callbacktimer(random, go_get_messages, 10 * ?POLLTIME),
+    agr:callbacktimer(random, go_get_messages, 10 * get_polltime(State)),
     {noreply, State};
 
 handle_info(_Info, State) ->
@@ -346,7 +346,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 						      -1,
 						      <<"Stream returned invalid XML">>),
 				  Sub),
-	    agr:callbacktimer(?POLLTIME, go_get_messages),
+	    agr:callbacktimer(get_polltime(State), go_get_messages),
 	    {noreply, State};
 	Xml ->
 	    try
@@ -377,7 +377,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 			       StoreSub;
 			   true -> Sub
 		       end,
-		agr:callbacktimer(?POLLTIME, go_get_messages),
+		agr:callbacktimer(get_polltime(State), go_get_messages),
 		{noreply, State#state{subscription = NSub}}
 	    catch
 		_Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
@@ -385,7 +385,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 							      -1,
 							      <<"Error while trying to interpret XML">>),
 					  Sub),
-		    agr:callbacktimer(?POLLTIME, go_get_messages),
+		    agr:callbacktimer(get_polltime(State), go_get_messages),
 		    {noreply, State}
 	    end
     end;
@@ -400,7 +400,7 @@ handle_http_response(_, {error, _Reason}, State) ->
 					      -2,
 					      list_to_binary(_Reason)),
 			  State),
-    agr:callbacktimer(?POLLTIME, go_get_messages),
+    agr:callbacktimer(get_polltime(State), go_get_messages),
     {noreply,State}.
 
 extract_new_messages(Messages, #subscription{last_msg_key = KnownKeys}) ->
@@ -511,3 +511,7 @@ create_prisma_error(SubId, Type, Desc) ->
 get_controller() ->
     %"aggregatortester." ++ agr:get_host().
     "admin@" ++ agr:get_host().
+
+get_polltime(#state{subscription = Sub}) ->
+    Polltime = Sub#subscription.polltime,
+    Polltime.

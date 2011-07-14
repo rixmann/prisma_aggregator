@@ -217,6 +217,7 @@ handle_json_msg(Sub, _From, "subscribe") ->
 						      url = GV(url), 
 						      source_type = binary_to_list(GV(sourceType)), 
 						      accessor = jlib:string_to_jid(binary_to_list(GV(accessor))),
+						      polltime = agr:get_polltime(),
 						      host = jlib:string_to_jid("aggregator." ++ agr:get_host())}),	    
 	    ok
     end.

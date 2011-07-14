@@ -3,11 +3,16 @@
 -include("prisma_aggregator.hrl").
 
 -export([get_host/0, callbacktimer/2, callbacktimer/3,
-	 format_date/0, get_timestamp/0]).
+	 format_date/0, get_timestamp/0,
+	 get_polltime/0]).
 
 get_host() ->
     [{host, Ret}] = ets:lookup(?CFG, host),
     Ret.
+
+get_polltime() ->
+    [{host, Pt}] = ets:lookup(?CFG, polltime),
+    Pt.
 
 callbacktimer(random, Callback, Offset) ->
     RandomCallbackTime = ?RAND:uniform([?POLLTIME]),
