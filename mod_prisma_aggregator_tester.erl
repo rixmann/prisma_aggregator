@@ -215,5 +215,5 @@ send_update_subscription(Url, Accessor, Feed, Name) ->
 	    json_eep:term_to_json(create_json_subscription(Url, Accessor, Feed, Name))).
 
 get_sender() ->
-    jlib:string_to_jid("aggregatortester." ++ get_host())
+    jlib:string_to_jid("aggregatortester." ++ get_host()).
     
