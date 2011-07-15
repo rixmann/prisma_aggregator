@@ -4,7 +4,6 @@
 
 -include("prisma_aggregator.hrl").
 -include("jlib.hrl").
--define(AGGREGATOR, "aggregator").
 -define(TCFG, aggregator_tester_config).
 
 -export([map_to_n_lines/3]).
@@ -15,6 +14,8 @@ start(Host, Opts) ->
     MyHost = gen_mod:get_opt_host(Host, Opts, "aggregatortester.@HOST@"),
     ets:new(?TCFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?TCFG,{host, Host}),
+    Aggregator = proplists:get_value(aggregator, Opts),
+    ets:insert(?CFG, {aggregator, Ret}),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
    ok.
 
@@ -124,6 +125,7 @@ get_host() ->
     [{host, Ret}] = ets:lookup(?TCFG, host),
     Ret.
 
+
 create_json_subscription(Url, Accessor, SourceType, Id) ->
     {[{<<"class">>,<<"de.prisma.datamodel.subscription.Subscription">>},
       {<<"filterSpecification">>,null},
@@ -157,7 +159,7 @@ send_subscriptions(Count, Accessor, Batchname) ->
 			   _ -> "RSS"
 		       end,
 		send_iq(get_sender(), 
-			jlib:string_to_jid("aggregator." ++ get_host()),
+			jlib:string_to_jid(get_aggregator()),
 			"subscribe",
 			json_eep:term_to_json(create_json_subscription(URI, Accessor, Feed, Batchname ++ "-" ++ integer_to_list(N))))
 	end,
@@ -175,7 +177,7 @@ send_subscriptions_bulk(Count, Accessor, Batchname) ->
 	end,
     SubList = map_to_n_lines(Device, Count, F),
     send_iq(get_sender(), 
-	    jlib:string_to_jid("aggregator." ++ get_host()),
+	    jlib:string_to_jid(get_aggregator()),
 	    "subscribeBulk",
 	    json_eep:term_to_json(SubList)).
 
@@ -192,8 +194,9 @@ map_to_n_lines(Device, Count, N, F, Acc) ->
         Line -> map_to_n_lines(Device, Count + 1, N, F, [F(Line, Count)| Acc])
     end.
 
-get_sender() ->
-    jlib:string_to_jid("aggregatortester." ++ get_host()).
+get_aggregator() ->
+    [{aggregator, Ret}] = ets:lookup(?TCFG, aggregator),
+    Ret.
 
 send_unsubscribe_bulk(Name, Start, Stop) ->
     SubList = lists:map(fun(El) ->
