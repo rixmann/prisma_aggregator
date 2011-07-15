@@ -15,7 +15,7 @@ start(Host, Opts) ->
     ets:new(?TCFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?TCFG,{host, Host}),
     Aggregator = proplists:get_value(aggregator, Opts),
-    ets:insert(?CFG, {aggregator, Aggregator}),
+    ets:insert(?TCFG, {aggregator, jlib:string_to_jid(Aggregator)}),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
    ok.
 
@@ -159,7 +159,7 @@ send_subscriptions(Count, Accessor, Batchname) ->
 			   _ -> "RSS"
 		       end,
 		send_iq(get_sender(), 
-			jlib:string_to_jid(get_aggregator()),
+			get_aggregator(),
 			"subscribe",
 			json_eep:term_to_json(create_json_subscription(URI, Accessor, Feed, Batchname ++ "-" ++ integer_to_list(N))))
 	end,
