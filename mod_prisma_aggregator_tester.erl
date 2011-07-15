@@ -204,12 +204,16 @@ send_unsubscribe_bulk(Name, Start, Stop) ->
 			end,
 			lists:seq(0, list_to_integer(Stop) - list_to_integer(Start))),
     send_iq(get_sender(),
-	    jlib:string_to_jid("aggregator." ++ get_host()),
+	    jlib:string_to_jid(get_aggregator()),
 	    "unsubscribeBulk",
 	    json_eep:term_to_json(SubList)).
 
 send_update_subscription(Url, Accessor, Feed, Name) ->
     send_iq(get_sender(), 
-	    jlib:string_to_jid("aggregator." ++ get_host()),
+	    jlib:string_to_jid(get_aggregator()),
 	    "updateSubscription",
 	    json_eep:term_to_json(create_json_subscription(Url, Accessor, Feed, Name))).
+
+get_sender() ->
+    jlib:string_to_jid("aggregatortester." ++ get_host())
+    
