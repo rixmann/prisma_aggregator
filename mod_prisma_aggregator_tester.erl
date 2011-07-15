@@ -15,7 +15,7 @@ start(Host, Opts) ->
     ets:new(?TCFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?TCFG,{host, Host}),
     Aggregator = proplists:get_value(aggregator, Opts),
-    ets:insert(?CFG, {aggregator, Ret}),
+    ets:insert(?CFG, {aggregator, Aggregator}),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
    ok.
 
