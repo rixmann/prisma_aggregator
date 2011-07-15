@@ -11,7 +11,7 @@ get_host() ->
     Ret.
 
 get_polltime() ->
-    [{host, Pt}] = ets:lookup(?CFG, polltime),
+    [{polltime, Pt}] = ets:lookup(?CFG, polltime),
     Pt.
 
 callbacktimer(random, Callback, Offset) ->
