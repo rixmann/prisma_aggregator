@@ -81,8 +81,8 @@ route(_From, To, {xmlelement, "message", _, _} = Packet) ->
 	    {match, [Url, Accessor, Feed, Name]} = re:run(Params, "(?<Url>.+) (?<Accessor>.+) (?<Feed>.+) (?<Name>.+)", [{capture, ['Url', 'Accessor', 'Feed', 'Name'], list}]),
 	    send_update_subscription(Url, Accessor, Feed, Name);
 	"emigrate " ++ Params ->
-	    {match, [From, To, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
-	    send_emigrate(From, To, Id)
+	    {match, [Source, Destination, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
+	    send_emigrate(Source, Destination, Id)
     end,
     ok;
 
