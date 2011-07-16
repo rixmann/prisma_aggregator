@@ -146,7 +146,7 @@ handle_call(_Request, _From, State) ->
 
 handle_cast({emigrate, To}, State = #state{subscription = Sub}) ->
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
-				  To,
+				  jlib:string_to_jid(To),
 				  "immigrate",
 				  json_eep:term_to_json(tuple_to_list(Sub#subscription{accessor = jlib:jid_to_string(Sub#subscription.accessor), host = ""}))),
     {stop, normal, State};
