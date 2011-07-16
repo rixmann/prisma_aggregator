@@ -202,7 +202,7 @@ handle_json_bulk(Liste, _From, Type) when is_list(Liste) ->
 	      Liste).
 
 handle_json_msg(Sub, From, "immigrate") ->
-    ?CONNECTOR:immigrate(Sub, From);
+    ?CONNECTOR:immigrate(list_to_tuple(Sub), From);
 
 handle_json_msg([To, Id], _From, "emigrate") ->
     ?CONNECTOR:emigrate(To, Id);
