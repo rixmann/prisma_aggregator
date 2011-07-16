@@ -418,12 +418,9 @@ extract_new_messages(Messages, #subscription{last_msg_key = KnownKeys}) ->
 merge_keys(Items, OldKeys) ->
     merge_keys(Items, OldKeys, 3).
 merge_keys(Items, OldKeys, N) ->
-    Ret = lists:map(fun(Item) -> select_key(Item) end,
-		    lists:sublist(lists:append(lists:sublist(Items, N), OldKeys),
-				  N)),
-    ?INFO_MSG("gemergte Keys: ~n~p oldKeys: ~n~pItems: ~n~p", [Ret, OldKeys, Items ]),
-    Ret.
-		 
+    lists:map(fun(Item) -> select_key(Item) end,
+	      lists:sublist(lists:append(lists:sublist(Items, N), OldKeys),
+			    N)).
 
 get_id(#subscription{id = Id}) ->
     Id;

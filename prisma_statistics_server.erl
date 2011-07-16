@@ -18,7 +18,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3, signal_httpc_ok/0]).
+	 terminate/2, code_change/3]).
 
 -export([signal_httpc_ok/0, signal_httpc_overload/0,
 	subscription_add/0, subscription_remove/0,
