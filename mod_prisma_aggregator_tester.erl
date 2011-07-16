@@ -79,7 +79,10 @@ route(_From, To, {xmlelement, "message", _, _} = Packet) ->
 	    ok;
 	"update_subscription " ++ Params ->
 	    {match, [Url, Accessor, Feed, Name]} = re:run(Params, "(?<Url>.+) (?<Accessor>.+) (?<Feed>.+) (?<Name>.+)", [{capture, ['Url', 'Accessor', 'Feed', 'Name'], list}]),
-	    send_update_subscription(Url, Accessor, Feed, Name)
+	    send_update_subscription(Url, Accessor, Feed, Name);
+	"emigrate " ++ Params ->
+	    {match, [From, To, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
+	    send_emigrate(From,To,Id)
     end,
     ok;
 
@@ -177,7 +180,7 @@ send_subscriptions_bulk(Count, Accessor, Batchname) ->
 	end,
     SubList = map_to_n_lines(Device, Count, F),
     send_iq(get_sender(), 
-	    jlib:string_to_jid(get_aggregator()),
+	    get_aggregator(),
 	    "subscribeBulk",
 	    json_eep:term_to_json(SubList)).
 
@@ -213,6 +216,12 @@ send_update_subscription(Url, Accessor, Feed, Name) ->
 	    jlib:string_to_jid(get_aggregator()),
 	    "updateSubscription",
 	    json_eep:term_to_json(create_json_subscription(Url, Accessor, Feed, Name))).
+
+send_emigrate(From, To, Id) ->
+    send_iq(get_sender(),
+	    From,
+	    "emigrate",
+	    json_eep:term_to_json({To, Id})).
 
 get_sender() ->
     jlib:string_to_jid("aggregatortester." ++ get_host()).

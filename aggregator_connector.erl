@@ -11,9 +11,16 @@
 -define(POLL_TIMEOUT, 30000).
 
 %% API
--export([start_link/1, stop/1, collapse/1, new_subscription/1, 
-	 start_worker/1, stop_all_and_delete_mnesia/0, rebind_all/1,
-	 unsubscribe/1, update_subscription/1]).
+-export([start_link/1, 
+	 stop/1, collapse/1, 
+	 new_subscription/1, 
+	 start_worker/1, 
+	 stop_all_and_delete_mnesia/0, 
+	 rebind_all/1,
+	 unsubscribe/1, 
+	 update_subscription/1,
+	 emigrate/2,
+	 immigrate/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -45,7 +52,7 @@ new_subscriptions([H = #subscription{}|T]) ->
 unsubscribe(Id) ->
     case get_pid_from_id(Id) of
 	not_found -> 
-	    log("id nicht gefunden, ~p", [Id]),
+	    catch delete_subscription(Id),
 	    not_found;
 	Pid -> gen_server:call(Pid, unsubscribe)
     end.
@@ -89,6 +96,17 @@ update_subscription(Sub = #subscription{id = Id}) ->
     Pid = get_pid_from_id(Id),
     gen_server:cast(Pid, {update_subscription, Sub}).
 
+emigrate(To, Id) ->
+    Pid = get_pid_from_id(Id),
+    gen_server:cast(Pid, {emigrate, To}).
+
+immigrate(Sub, From) ->
+    new_subscription(Sub),
+    mod_prisma_aggregator:send_iq("aggregator." ++ agr:get_host(),
+				  jlib:jid_to_string(From),
+				  "unsubscribe",
+				  Sub#subscription.id).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -118,9 +136,7 @@ init([SubOrId]) ->
 		callbacks = Callbacks}}.
 
 handle_call(unsubscribe, _From, State) ->
-    F = fun() -> mnesia:delete({?PST, get_id(State)})
-	end, 
-    {atomic, ok} = mnesia:transaction(F),
+    delete_subscription(get_id(State)),
     {stop, normal, unsubscribed, State};
 
 handle_call(_Request, _From, State) ->
@@ -128,6 +144,13 @@ handle_call(_Request, _From, State) ->
     log("Ignored call~n~p", [{_Request, _From, State}]),
     {reply, Reply, State}.
 
+handle_cast({emigrate, To}, State = #state{subscription = Sub}) ->
+    mod_prisma_aggregator:send_iq(Sub#subscription.host,
+				  To,
+				  "immigrate",
+				  json_eep:term_to_json(Sub)),
+    {stop, normal, State};
+	
 handle_cast({update_subscription, NSub = #subscription{}}, State = #state{subscription = OSub}) ->
     Keys = OSub#subscription.last_msg_key,
     NNSub = NSub#subscription{last_msg_key = Keys},
@@ -516,3 +539,8 @@ get_controller() ->
 get_polltime(#state{subscription = Sub}) ->
     Polltime = Sub#subscription.polltime,
     Polltime.
+
+delete_subscription(Id) ->
+    F = fun() -> mnesia:delete({?PST, Id})
+	end, 
+    {atomic, ok} = mnesia:transaction(F).

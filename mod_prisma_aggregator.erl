@@ -122,7 +122,9 @@ route(From, To, {xmlelement, "iq", _, _} = Packet) ->
 	       (F =:= "unsubscribe") or
 	       (F =:= "unsubscribeBulk") or
 	       (F =:= "updateSubscription") or 
-	       (F =:= "updateSubscriptionBulk") -> 
+	       (F =:= "updateSubscriptionBulk") or
+	       (F =:= "immigrate") or
+	       (F =:= "emigrate")-> 
 	    case json_eep:json_to_term(Body) of
 		{error, _Reason} -> ?INFO_MSG("received unhandled xmpp message:~n~p~nparsing error:~n~p", [Body, _Reason]);
 		Json when (F =:= "subscribeBulk") -> handle_json_bulk(Json, From, "subscribe");
@@ -163,6 +165,15 @@ send_message(From, To, TypeStr, BodyStr) ->
     ejabberd_router:route(From, To, XmlBody).
 
 
+send_iq(From, To, TypeStr, BodyStr) ->
+    XmlBody = {xmlelement, "iq",
+	       [{"type", TypeStr},
+		{"from", jlib:jid_to_string(From)},
+		{"to", jlib:jid_to_string(To)}],
+	       [{xmlelement, "query", [],
+		 [{xmlcdata, BodyStr}]}]},
+    ejabberd_router:route(From, To, XmlBody).
+
 %% internal functions
 
 
@@ -189,6 +200,12 @@ handle_json_bulk(Liste, _From, Type) when is_list(Liste) ->
     lists:map(fun(El) -> 
 		      handle_json_msg(El, _From, Type) end,
 	      Liste).
+
+handle_json_msg(Sub, From, "immigrate") ->
+    ?CONNECTOR:immigrate(Sub, From);
+
+handle_json_msg({To, Id}, _From, "emigrate") ->
+    ?CONNECTOR:emigrate(To, Id);
 
 handle_json_msg(Id, _From, "unsubscribe") ->
     ?CONNECTOR:unsubscribe(Id);
