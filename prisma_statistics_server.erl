@@ -115,7 +115,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 					  proceeded_subs_old = Psubs_old}) ->
     {_, Runtime} = statistics(runtime),
     {_, Walltime} = statistics(wall_clock),
-    Nload = trunc(Oload * 0.9 + Runtime * 0.1),       %processor load is smoothened
+    Nload = trunc(Oload * 0.9 + (Runtime * 100 / Walltime) * 0.1),       %processor load is smoothened
     Psubs_sec = trunc(Psubs / (Walltime / 1000)),
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
