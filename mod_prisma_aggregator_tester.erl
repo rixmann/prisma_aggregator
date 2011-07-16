@@ -219,7 +219,7 @@ send_update_subscription(Url, Accessor, Feed, Name) ->
 
 send_emigrate(From, To, Id) ->
     send_iq(get_sender(),
-	    From,
+	    jlib:string_to_jid(From),
 	    "emigrate",
 	    json_eep:term_to_json([To, Id])).
 
