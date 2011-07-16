@@ -21,7 +21,8 @@
 	 terminate/2, code_change/3, signal_httpc_ok/0]).
 
 -export([signal_httpc_ok/0, signal_httpc_overload/0,
-	subscription_add/0, subscription_remove/0]).
+	subscription_add/0, subscription_remove/0,
+	sub_proceeded/0]).
 
 -record(state, {httpc_overload = false, 
 		device, 
@@ -46,6 +47,9 @@ signal_httpc_overload() ->
 
 signal_httpc_ok() ->
     gen_server:cast(?MODULE, httpc_ok).
+
+sub_proceeded() ->
+    gen_server:cast(?MODULE, sub_proceeded).
 
 subscription_add() ->
     gen_server:cast(?MODULE, subscription_add).
@@ -99,12 +103,14 @@ handle_cast(subscription_rem, State = #state{subscription_count = Count}) ->
 handle_cast(subscription_add, State = #state{subscription_count = Count}) ->
     {noreply, State#state{subscription_count = Count + 1}};
 
-handle_cast(httpc_overload, State = #state{httpc_overload = Old, device = Dev}) ->
+handle_cast(httpc_overload, State = #state{}) ->
     {noreply, State#state{httpc_overload = true}};
 
-handle_cast(httpc_ok, State = #state{httpc_overload = Old, proceeded_subs = Psubs}) ->
-    {noreply, State#state{httpc_overload = false,
-			  proceeded_subs = Psubs + 1}};
+handle_cast(httpc_ok, State = #state{}) ->
+    {noreply, State#state{httpc_overload = false}};
+
+handle_cast(sub_proceeded, State = #state{proceeded_subs = Psubs}) ->
+    {noreply, State#state{proceeded_subs = Psubs + 1}};
 
 handle_cast(collect_stats, State = #state{device = Dev, 
 					  timestamp_offset = To, 

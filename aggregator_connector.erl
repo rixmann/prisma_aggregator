@@ -388,7 +388,8 @@ handle_http_response(initial_get_stream, Body, State) ->
 		    agr:callbacktimer(get_polltime(State), go_get_messages),
 		    {noreply, State}
 	    end
-    end;
+    end,
+    prisma_statistics_server:sub_proceeded();
 
 handle_http_response({couch_doc_store_reply, _Doclist}, _Body, State) ->
     %log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), _Body]),
