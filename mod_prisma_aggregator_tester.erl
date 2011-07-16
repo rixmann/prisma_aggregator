@@ -221,7 +221,7 @@ send_emigrate(From, To, Id) ->
     send_iq(get_sender(),
 	    From,
 	    "emigrate",
-	    json_eep:term_to_json({To, Id})).
+	    json_eep:term_to_json([To, Id])).
 
 get_sender() ->
     jlib:string_to_jid("aggregatortester." ++ get_host()).
