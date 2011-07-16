@@ -340,56 +340,57 @@ get_id_from_subscription_or_id(Id) ->
 
 handle_http_response(initial_get_stream, Body, State) -> 
     Sub = State#state.subscription,
-    case xml_stream:parse_element(Body) of
-	{error, {_, _Reason}} -> 
-	    message_to_controller(create_prisma_error(list_to_binary(get_id(Sub)),
-						      -1,
-						      <<"Stream returned invalid XML">>),
-				  Sub),
-	    agr:callbacktimer(get_polltime(State), go_get_messages),
-	    {noreply, State};
-	Xml ->
-	    try
-		Content = case Sub#subscription.source_type of
-			      "RSS" -> parse_rss(Xml);
-			      "ATOM" -> parse_atom(Xml);
-			      _ -> parse_rss(Xml)
-			  end,
-		NewContent = extract_new_messages(Content, Sub),
-		NSub = if
-			   length(NewContent) > 0 ->
-			       lists:map(fun(Val) -> 
-						 message_to_accessor(json_eep:term_to_json(
-								       create_prisma_message(list_to_binary(get_id(State)),
-											     list_to_binary(proplists:get_value(title, Val)))),
-								     State)
-					 end, 
-					 NewContent),
-			       EnrichedContent = lists:map(fun([H|T]) ->
-								   [{subId, get_id(Sub)},
-								    {feed, Sub#subscription.source_type},
-								    {date, agr:format_date()},
-								    H | T]
-							   end, NewContent),
-			       ok = store_to_couch(EnrichedContent, State),
-			       StoreSub = Sub#subscription{last_msg_key = merge_keys(Content, Sub#subscription.last_msg_key)},
-			       ok = mnesia:dirty_write(StoreSub),
-			       StoreSub;
-			   true -> Sub
-		       end,
-		agr:callbacktimer(get_polltime(State), go_get_messages),
-		{noreply, State#state{subscription = NSub}}
-	    catch
-		_Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
-		    message_to_controller(create_prisma_error(list_to_binary(get_id(Sub)),
-							      -1,
-							      <<"Error while trying to interpret XML">>),
-					  Sub),
-		    agr:callbacktimer(get_polltime(State), go_get_messages),
-		    {noreply, State}
-	    end
-    end,
-    prisma_statistics_server:sub_proceeded();
+    Ret = case xml_stream:parse_element(Body) of
+	      {error, {_, _Reason}} -> 
+		  message_to_controller(create_prisma_error(list_to_binary(get_id(Sub)),
+							    -1,
+							    <<"Stream returned invalid XML">>),
+					Sub),
+		  agr:callbacktimer(get_polltime(State), go_get_messages),
+		  {noreply, State};
+	      Xml ->
+		  try
+		      Content = case Sub#subscription.source_type of
+				    "RSS" -> parse_rss(Xml);
+				    "ATOM" -> parse_atom(Xml);
+				    _ -> parse_rss(Xml)
+				end,
+		      NewContent = extract_new_messages(Content, Sub),
+		      NSub = if
+				 length(NewContent) > 0 ->
+				     lists:map(fun(Val) -> 
+						       message_to_accessor(json_eep:term_to_json(
+									     create_prisma_message(list_to_binary(get_id(State)),
+												   list_to_binary(proplists:get_value(title, Val)))),
+									   State)
+					       end, 
+					       NewContent),
+				     EnrichedContent = lists:map(fun([H|T]) ->
+									 [{subId, get_id(Sub)},
+									  {feed, Sub#subscription.source_type},
+									  {date, agr:format_date()},
+									  H | T]
+								 end, NewContent),
+				     ok = store_to_couch(EnrichedContent, State),
+				     StoreSub = Sub#subscription{last_msg_key = merge_keys(Content, Sub#subscription.last_msg_key)},
+				     ok = mnesia:dirty_write(StoreSub),
+				     StoreSub;
+				 true -> Sub
+			     end,
+		      agr:callbacktimer(get_polltime(State), go_get_messages),
+		      {noreply, State#state{subscription = NSub}}
+		  catch
+		      _Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
+			  message_to_controller(create_prisma_error(list_to_binary(get_id(Sub)),
+								    -1,
+								    <<"Error while trying to interpret XML">>),
+						Sub),
+			  agr:callbacktimer(get_polltime(State), go_get_messages),
+			  {noreply, State}
+		  end
+	  end,
+    prisma_statistics_server:sub_proceeded(),
+    Ret;
 
 handle_http_response({couch_doc_store_reply, _Doclist}, _Body, State) ->
     %log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), _Body]),
