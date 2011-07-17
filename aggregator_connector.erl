@@ -105,7 +105,7 @@ immigrate(Sub, From) ->
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
 				  From,
 				  "unsubscribe",
-				  Sub#subscription.id).
+				  json_eep:term_to_json(Sub#subscription.id)).
 
 %%====================================================================
 %% gen_server callbacks
