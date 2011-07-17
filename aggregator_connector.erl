@@ -147,7 +147,7 @@ handle_call(_Request, _From, State) ->
 
 handle_cast({emigrate, To}, State = #state{subscription = Sub}) ->
     Tsub = tuple_to_list(Sub#subscription{accessor = jlib:jid_to_string(Sub#subscription.accessor), host = ""}),
-    ?INFO_MSG("subscription, die emigrieren soll: ~n~p~original sub: ~n~p", [Tsub, Sub]),
+    ?INFO_MSG("subscription, die emigrieren soll: ~n~poriginal sub: ~n~p", [Tsub, Sub]),
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
 				  jlib:string_to_jid(To),
 				  "immigrate",
