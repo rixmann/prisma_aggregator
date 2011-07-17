@@ -201,8 +201,10 @@ handle_json_bulk(Liste, _From, Type) when is_list(Liste) ->
 		      handle_json_msg(El, _From, Type) end,
 	      Liste).
 
-handle_json_msg(Sub = #subscription{accessor = Accessor, host = Host}, From, "immigrate") ->
-    ?CONNECTOR:immigrate(list_to_tuple(Sub#subscription{accessor = jlib:string_to_jid(Accessor), 
+handle_json_msg([H| T], From, "immigrate") ->
+    Sub = list_to_tuple([subscription | T]),
+    Accessor = jlib:string_to_jid(Sub#subscription.Accessor),
+    ?CONNECTOR:immigrate(list_to_tuple(Sub#subscription{accessor = Accessor, 
 							host =  jlig:string_to_jid("aggregator." ++ agr:get_host())}), From);
 
 handle_json_msg([To, Id], _From, "emigrate") ->
