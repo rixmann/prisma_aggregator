@@ -342,22 +342,30 @@ parse_atom(Xml) ->
 	_Err :_Reason -> {error, badxml}
     end.
 
+chain([{Fname, Arg}|T]) ->
+    Fname(Arg, chain(T));
+chain([]) -> [].
 
 select_key(Streamentry) ->
-    case proplists:get_value(content, Streamentry) of
-	undefined or "" ->
-	    case proplists:get_value(title, Streamentry) of
-		undefined or "" -> case proplists:get_value(link, Streamentry) of
-				       undefined or "" -> case proplists:get_value(key, Streamentry) of
-							      undefined or "" -> "no_key";
-							      Val -> Val
-							  end;
-				       Val -> Val
-				   end;
-		Val -> Val
-	    end;
-	Val -> Val
-    end.
+    HelpFn = fun(Fieldname, Fn) ->
+		     fun() ->
+			     case proplists:get_value(Fieldname, Streamentry) of
+				 Val when (Val =:= undefined) or (Val =:= "") ->
+				     Fn();
+				 Val -> Val
+			     end
+		     end
+	     end,    
+    Fun = chain([{HelpFn, content},
+		 {HelpFn, title},
+		 {HelpFn, link},
+		 {HelpFn, key},
+		 {fun(ok, []) -> "no_key" end, ok}]),
+						%    Fun = HelpFn(content,
+						%		 HelpFn(title,
+						%			HelpFn(link,
+						%			       HelpFn(key, fun() -> "no_key" end)))),
+    Fun().
 
 get_id_from_subscription_or_id(#subscription{id = Id}) ->
     Id;
