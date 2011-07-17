@@ -146,10 +146,12 @@ handle_call(_Request, _From, State) ->
     {reply, Reply, State}.
 
 handle_cast({emigrate, To}, State = #state{subscription = Sub}) ->
+    Tsub = tuple_to_list(Sub#subscription{accessor = jlib:jid_to_string(Sub#subscription.accessor), host = ""}),
+    ?INFO_MSG("subscription, die emigrieren soll: ~n~p", [Tsub]),
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
 				  jlib:string_to_jid(To),
 				  "immigrate",
-				  json_eep:term_to_json(tuple_to_list(Sub#subscription{accessor = jlib:jid_to_string(Sub#subscription.accessor), host = ""}))),
+				  json_eep:term_to_json(Tsub)),
     {stop, normal, State};
 	
 handle_cast({update_subscription, NSub = #subscription{}}, State = #state{subscription = OSub}) ->
