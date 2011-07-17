@@ -344,17 +344,16 @@ parse_atom(Xml) ->
 
 
 select_key(Streamentry) ->
-%    ?INFO_MSG("streamentry, aus dem ein key geholt werden soll: ~n~p", [Streamentry]),
     case proplists:get_value(content, Streamentry) of
-	undefined ->
+	undefined or "" ->
 	    case proplists:get_value(title, Streamentry) of
-		undefined -> case proplists:get_value(link, Streamentry) of
-				 undefined -> case proplists:get_value(key, Streamentry) of
-						  undefined -> "no_key";
-						  Val -> Val
-					      end;
-				 Val -> Val
-			     end;
+		undefined or "" -> case proplists:get_value(link, Streamentry) of
+				       undefined or "" -> case proplists:get_value(key, Streamentry) of
+							      undefined or "" -> "no_key";
+							      Val -> Val
+							  end;
+				       Val -> Val
+				   end;
 		Val -> Val
 	    end;
 	Val -> Val
@@ -386,9 +385,8 @@ handle_http_response(initial_get_stream, Body, State) ->
 		      NSub = if
 				 length(NewContent) > 0 ->
 				     lists:map(fun(Val) -> 
-						       message_to_accessor(json_eep:term_to_json(
-									     create_prisma_message(list_to_binary(get_id(State)),
-												   list_to_binary(proplists:get_value(title, Val)))),
+						       message_to_accessor(json_eep:term_to_json(create_prisma_message(list_to_binary(get_id(State)),
+														       list_to_binary(proplists:get_value(title, Val)))),
 									   State)
 					       end, 
 					       NewContent),
