@@ -102,8 +102,8 @@ emigrate(To, Id) ->
 
 immigrate(Sub, From) ->
     new_subscription(Sub),
-    mod_prisma_aggregator:send_iq("aggregator." ++ agr:get_host(),
-				  jlib:jid_to_string(From),
+    mod_prisma_aggregator:send_iq(Sub#subscription.host,
+				  From,
 				  "unsubscribe",
 				  Sub#subscription.id).
 
