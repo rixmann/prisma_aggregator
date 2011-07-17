@@ -361,10 +361,6 @@ select_key(Streamentry) ->
 		 {HelpFn, link},
 		 {HelpFn, key},
 		 {fun(ok, []) -> "no_key" end, ok}]),
-						%    Fun = HelpFn(content,
-						%		 HelpFn(title,
-						%			HelpFn(link,
-						%			       HelpFn(key, fun() -> "no_key" end)))),
     Fun().
 
 get_id_from_subscription_or_id(#subscription{id = Id}) ->
