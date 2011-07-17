@@ -346,20 +346,20 @@ parse_atom(Xml) ->
 select_key(Streamentry) ->
     ?INFO_MSG("streamentry, aus dem ein key geholt werden soll: ~n~p", [Streamentry]),
     case proplists:get_value(key, Streamentry) of
-	[] ->
+	undefined ->
 	    case proplists:get_value(title, Streamentry) of
-		[] -> case proplists:get_value(link, Streamentry) of
-			  [] -> case proplists:get_value(content, Streamentry) of
-				    [] -> no_key;
-				    Val -> Val
-				end;
-			  Val -> Val
-		      end;
+		undefined -> case proplists:get_value(link, Streamentry) of
+				 undefined -> case proplists:get_value(content, Streamentry) of
+						  [] -> no_key;
+						  Val -> Val
+					      end;
+				 Val -> Val
+			     end;
 		Val -> Val
 	    end;
 	Val -> Val
     end.
-				    
+
 get_id_from_subscription_or_id(#subscription{id = Id}) ->
     Id;
 get_id_from_subscription_or_id(Id) ->
