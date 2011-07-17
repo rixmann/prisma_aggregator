@@ -102,6 +102,7 @@ emigrate(To, Id) ->
 
 immigrate(Sub, From) ->
     new_subscription(Sub),
+    ?INFO_MSG("immigrierende subscription: ~n~p", [Sub]),
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
 				  From,
 				  "unsubscribe",
