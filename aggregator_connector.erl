@@ -344,6 +344,7 @@ parse_atom(Xml) ->
 
 
 select_key(Streamentry) ->
+    ?INFO_MSG("streamentry, aus dem ein key geholt werden soll: ~n~p", [Streamentry]),
     case proplists:get_value(key, Streamentry) of
 	[] ->
 	    case proplists:get_value(title, Streamentry) of
