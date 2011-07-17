@@ -102,7 +102,7 @@ emigrate(To, Id) ->
 
 immigrate(Sub, From) ->
     new_subscription(Sub),
-    ?INFO_MSG("immigrierende subscription: ~n~p", [Sub]),
+    %?INFO_MSG("immigrierende subscription: ~n~p", [Sub]),
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
 				  From,
 				  "unsubscribe",
@@ -147,7 +147,7 @@ handle_call(_Request, _From, State) ->
 
 handle_cast({emigrate, To}, State = #state{subscription = Sub}) ->
     Tsub = tuple_to_list(Sub#subscription{accessor = jlib:jid_to_string(Sub#subscription.accessor), host = ""}),
-    ?INFO_MSG("subscription, die emigrieren soll: ~n~poriginal sub: ~n~p", [Tsub, Sub]),
+    %?INFO_MSG("subscription, die emigrieren soll: ~n~poriginal sub: ~n~p", [Tsub, Sub]),
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
 				  jlib:string_to_jid(To),
 				  "immigrate",
@@ -344,13 +344,13 @@ parse_atom(Xml) ->
 
 
 select_key(Streamentry) ->
-    ?INFO_MSG("streamentry, aus dem ein key geholt werden soll: ~n~p", [Streamentry]),
+%    ?INFO_MSG("streamentry, aus dem ein key geholt werden soll: ~n~p", [Streamentry]),
     case proplists:get_value(key, Streamentry) of
 	undefined ->
 	    case proplists:get_value(title, Streamentry) of
 		undefined -> case proplists:get_value(link, Streamentry) of
 				 undefined -> case proplists:get_value(content, Streamentry) of
-						  [] -> no_key;
+						  undefined -> "no_key";
 						  Val -> Val
 					      end;
 				 Val -> Val
