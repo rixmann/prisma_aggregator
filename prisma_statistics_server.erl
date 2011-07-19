@@ -129,12 +129,16 @@ handle_cast(collect_stats, State = #state{device = Dev,
 	      [(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
 	       statistics(run_queue),                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
-	       if Httpc_overload -> 100;
+	       if Httpc_overload -> 1;
 		  true -> 0
 	       end,
 	       SubCnt div 100,
 	       NPsubs,
-	       list_to_integer(string:substr(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz="), 2, length(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz=")) -2)) div (1024 * 10)]),
+	       try %speicherverbrauch, wird durch shell-aufruf geholt
+		   list_to_integer(string:substr(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz="), 2, length(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz=")) -2)) div (1024 * 10)
+	       catch
+		   _:_ -> -1
+	       end]),
     agr:callbacktimer(1000, collect_stats),
     {noreply, State#state{old_load = Nload,
 			  proceeded_subs = 0,
