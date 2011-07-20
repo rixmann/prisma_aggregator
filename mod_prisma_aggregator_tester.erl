@@ -92,7 +92,7 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		  {<<"errorType">>, _Type},
 		  {<<"errorDescription">>, _Desc}]} ->
 		    send_iq(get_sender(),
-			    jlib:string_to_jid(From),
+			    From,
 			    "unsubscribe",
 			    json_eep:term_to_json(binary_to_list(SubId)));
 	
