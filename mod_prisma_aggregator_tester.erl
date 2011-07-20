@@ -91,10 +91,14 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		  {<<"subscriptionID">>, SubId},
 		  {<<"errorType">>, _Type},
 		  {<<"errorDescription">>, _Desc}]} ->
-		    send_iq(get_sender(),
-			    From,
-			    "unsubscribe",
-			    json_eep:term_to_json(binary_to_list(SubId)));
+		    try
+			send_iq(get_sender(),
+				From,
+				"unsubscribe",
+				json_eep:term_to_json(binary_to_list(SubId)))
+		    catch
+			_ : _ -> fail %wegen binary to list
+		    end;
 	
 		{[{<<"class">>,<<"de.prisma.datamodel.message.Message">>},
 		  {<<"id">>,null},
