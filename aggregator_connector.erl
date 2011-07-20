@@ -536,7 +536,7 @@ create_prisma_error(SubId, Type, Desc) ->
 
 get_controller() ->
     %"aggregatortester." ++ agr:get_host().
-    "admin@" ++ agr:get_host().
+    agr:get_controller().
 
 get_polltime(#state{subscription = Sub}) ->
     Polltime = Sub#subscription.polltime,

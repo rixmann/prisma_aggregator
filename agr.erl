@@ -5,10 +5,15 @@
 -export([get_host/0, callbacktimer/2, callbacktimer/3,
 	 format_date/0, get_timestamp/0,
 	 get_polltime/0,
-	 callbacktimer_callback_fn/2]).
+	 callbacktimer_callback_fn/2,
+	 get_controller/0]).
 
 get_host() ->
     [{host, Ret}] = ets:lookup(?CFG, host),
+    Ret.
+
+get_controller() ->
+    [{controller, Ret}] = ets:lookup(?CFG, controller),
     Ret.
 
 get_polltime() ->
