@@ -118,7 +118,6 @@ handle_cast(collect_stats, State = #state{device = Dev,
 					  timestamp_offset = To,
 					  runtime_offset = Rto,
 					  httpc_overload = Httpc_overload,
-					  old_load = Oload,
 					  subscription_count = SubCnt,
 					  proceeded_subs = Psubs,
 					  proceeded_subs_old = Psubs_old,
@@ -127,7 +126,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
     {Walltime1970, _} = statistics(wall_clock),
     Runtime = RuntimeStart - Rto,
     Walltime = Walltime1970 - To,
-    Nload = trunc(10 * Runtime / Walltime),
+    Nload = trunc(100 * Runtime / Walltime),
     Psubs_sec = trunc(Psubs / (Walltime / 1000)),
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
@@ -139,15 +138,14 @@ handle_cast(collect_stats, State = #state{device = Dev,
 		  true -> 0
 	       end,
 	       SubCnt div 100,
-	       NPsubs,
+	       Psubs_sec,%NPsubs,
 	       try %speicherverbrauch, wird durch shell-aufruf geholt
 		   list_to_integer(string:substr(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz="), 2, length(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz=")) -2)) div (1024 * 10)
 	       catch
 		   _:_ -> -1
 	       end]),
     agr:callbacktimer(1000, collect_stats),
-    {noreply, State#state{old_load = Nload,
-			  proceeded_subs = 0,
+    {noreply, State#state{proceeded_subs = 0,
 			  proceeded_subs_old = NPsubs,
 			  timestamp_offset = Walltime1970,
 			  runtime_offset = RuntimeStart}};

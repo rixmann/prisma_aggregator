@@ -45,10 +45,6 @@ new_subscription(Sub = #subscription{}) ->
 	_ -> supervisor:start_child(?SUP, [Sub])
     end.
 
-new_subscriptions([H = #subscription{}|T]) ->
-    lists:map(new_suscription, [H|T]).
-
-
 unsubscribe(Id) ->
     case get_pid_from_id(Id) of
 	not_found -> 
@@ -255,7 +251,7 @@ handle_info({ibrowse_async_response_end, ReqId} , State) ->
 handle_info({'EXIT', _Reason, normal}, State) -> %timer process died
     {noreply, State};
 
-handle_info({_Ref, {error, _}} = F, State) ->
+handle_info({_Ref, {error, _}} = _F, State) ->
 						%Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
 						%log("handle info on ~p, error:~n~p anzahl callbacks:~n~p", [get_id(State), F, Content]),
     

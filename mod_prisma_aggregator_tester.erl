@@ -93,17 +93,14 @@ route(_,_,Packet) ->
 
 %% HELPER FUNCTIONS
 
-strip_bom([239,187,191|C]) -> C;
-strip_bom(C) -> C.
+%strip_bom([239,187,191|C]) -> C;
+%strip_bom(C) -> C.
 
 send_presence(From, To, "") ->
     ejabberd_router:route(From, To, {xmlelement, "presence", [], []});
 
 send_presence(From, To, TypeStr) ->
     ejabberd_router:route(From, To, {xmlelement, "presence", [{"type", TypeStr}], []}).
-
-echo(From, To, Body) ->
-    send_message(From, To, "chat", Body).
 
 send_message(From, To, TypeStr, BodyStr) ->
     XmlBody = {xmlelement, "message",

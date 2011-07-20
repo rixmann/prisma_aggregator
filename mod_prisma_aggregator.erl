@@ -16,7 +16,7 @@ start(Host, Opts) ->
     ?INFO_MSG("mod_prisma_aggregator starting!, options:~n~p", [Opts]),
     ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?CFG,{host, Host}),
-    [Accessor, Coordinator, DebugLvl, Polltime] = %read config and store values in ?CFG ets, local config may be found in gen_server's Status
+    [_Accessor, _Coordinator, _DebugLvl, _Polltime] = %read config and store values in ?CFG ets, local config may be found in gen_server's Status
 	lists:map(fun(El) -> 
 			  Ret = proplists:get_value(El, Opts),
 			  ets:insert(?CFG, {El, Ret}),
@@ -201,7 +201,7 @@ handle_json_bulk(Liste, _From, Type) when is_list(Liste) ->
 		      handle_json_msg(El, _From, Type) end,
 	      Liste).
 
-handle_json_msg([H| T], From, "immigrate") ->
+handle_json_msg([<<"subscription">>| T], From, "immigrate") ->
     Sub = list_to_tuple([subscription | T]),
     Accessor = jlib:string_to_jid(Sub#subscription.accessor),
     ?CONNECTOR:immigrate(Sub#subscription{accessor = Accessor, 
