@@ -26,7 +26,8 @@
 
 -record(state, {httpc_overload = false, 
 		device, 
-		timestamp_offset, 
+		timestamp_offset,
+		runtime_offset,
 		old_load = 0,
 		subscription_count = 0,
 		proceeded_subs,
@@ -72,11 +73,15 @@ init([]) ->
     ok = file:delete("/var/log/ejabberd/runtimestats.dat"),
     {ok, Device} = file:open("/var/log/ejabberd/runtimestats.dat", write),
     agr:callbacktimer(1, collect_stats),
+    {RuntimeStart, _} = statistics(runtime),
+    {Walltime1970, _} = statistics(wall_clock),
     {ok, #state{device = Device, 
-		timestamp_offset = agr:get_timestamp(),
+%		timestamp_offset = agr:get_timestamp(),
 		subscription_count = 0,
 		proceeded_subs = 0,
-		proceeded_subs_old = 0}}.
+		proceeded_subs_old = 0,
+		timestamp_offset = Walltime1970,
+		runtime_offset = RuntimeStart}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -113,20 +118,23 @@ handle_cast(sub_proceeded, State = #state{proceeded_subs = Psubs}) ->
     {noreply, State#state{proceeded_subs = Psubs + 1}};
 
 handle_cast(collect_stats, State = #state{device = Dev, 
-					  timestamp_offset = To, 
+					  timestamp_offset = To,
+					  runtime_offset = Rto,
 					  httpc_overload = Httpc_overload,
 					  old_load = Oload,
 					  subscription_count = SubCnt,
 					  proceeded_subs = Psubs,
 					  proceeded_subs_old = Psubs_old}) ->
-    {_, Runtime} = statistics(runtime),
-    {_, Walltime} = statistics(wall_clock),
-    Nload = trunc(Oload * 0.9 + (Runtime * 100 / Walltime) * 0.1),       %processor load is smoothened
+    {RuntimeStart, _} = statistics(runtime),
+    {Walltime1970, _} = statistics(wall_clock),
+    Runtime = RuntimeStart - Rto,
+    Walltime = Walltime1970 - To,
+    Nload = trunc(Oload * 0.9 + (Runtime / Walltime) * 10),       %processor load is smoothened 100 ~ 1 core
     Psubs_sec = trunc(Psubs / (Walltime / 1000)),
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
 	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
-	      [(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
+	      [trunc(Runtime div 100), %(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
 	       statistics(run_queue),                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
 	       if Httpc_overload -> 1;
@@ -142,7 +150,9 @@ handle_cast(collect_stats, State = #state{device = Dev,
     agr:callbacktimer(1000, collect_stats),
     {noreply, State#state{old_load = Nload,
 			  proceeded_subs = 0,
-			  proceeded_subs_old = NPsubs}};
+			  proceeded_subs_old = NPsubs,
+			  timestamp_offset = Walltime1970,
+			  runtime_offset = RuntimeStart}};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
