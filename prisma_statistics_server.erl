@@ -6,11 +6,7 @@
 %%% Created : 30 Jun 2011 by Ole Rixmann <ole@kiiiiste>
 %%%-------------------------------------------------------------------
 -module(prisma_statistics_server).
-
-
-
 -behaviour(gen_server).
-
 -include("prisma_aggregator.hrl").
 
 %% API
@@ -77,7 +73,6 @@ init([]) ->
     {RuntimeStart, _} = statistics(runtime),
     {Walltime1970, _} = statistics(wall_clock),
     {ok, #state{device = Device, 
-						%		timestamp_offset = agr:get_timestamp(),
 		subscription_count = 0,
 		proceeded_subs = 0,
 		proceeded_subs_old = 0,
@@ -132,12 +127,12 @@ handle_cast(collect_stats, State = #state{device = Dev,
     {Walltime1970, _} = statistics(wall_clock),
     Runtime = RuntimeStart - Rto,
     Walltime = Walltime1970 - To,
-    Nload = trunc(Oload * 0.9 + (Runtime / Walltime) * 10),       %processor load is smoothened 100 ~ 1 core
+    Nload = trunc(10 * Runtime / Walltime),
     Psubs_sec = trunc(Psubs / (Walltime / 1000)),
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
 	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
-	      [trunc((Walltime1970 - Walltime_init) div 100), %(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
+	      [trunc((Walltime1970 - Walltime_init) div 100),  %walltime in 10th of seconds
 	       statistics(run_queue),                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
 	       if Httpc_overload -> 1;
