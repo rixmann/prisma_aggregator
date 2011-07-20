@@ -86,7 +86,12 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		    send_emigrate(Source, Destination, Id)
 	    end;
 	"PrismaMessage" ->
-	    case json_eep:json_to_term(xml:get_subtag_cdata(Packet, "body")) of
+	    JSON = try
+		       json_eep:json_to_term(xml:get_subtag_cdata(Packet, "body"))
+		   catch
+		       _:_ -> parsing_failure
+		   end,
+	    case JSON of
 		{[{<<"class">>,<<"de.prisma.datamodel.message.ErrorMessage">>},
 		  {<<"subscriptionID">>, SubId},
 		  {<<"errorType">>, _Type},
