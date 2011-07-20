@@ -49,7 +49,7 @@ route(From, To, {xmlelement, "presence", _, _} = Packet) ->
     end,
     ok;
 
-route(_From, To, {xmlelement, "message", _, _} = Packet) ->
+route(From, To, {xmlelement, "message", _, _} = Packet) ->
     case xml:get_tag_attr_s("type", Packet) of "chat" ->
 	    case xml:get_subtag_cdata(Packet, "body") of
 		"" -> ok;
@@ -92,7 +92,7 @@ route(_From, To, {xmlelement, "message", _, _} = Packet) ->
 		  {<<"errorType">>, _Type},
 		  {<<"errorDescription">>, _Desc}]} ->
 		    send_iq(get_sender(),
-			    get_aggregator(),
+			    jlib:string_to_jid(From),
 			    "unsubscribe",
 			    json_eep:term_to_json(binary_to_list(SubId)));
 	
