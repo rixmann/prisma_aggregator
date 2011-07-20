@@ -50,39 +50,71 @@ route(From, To, {xmlelement, "presence", _, _} = Packet) ->
     ok;
 
 route(_From, To, {xmlelement, "message", _, _} = Packet) ->
-    case xml:get_subtag_cdata(Packet, "body") of
-	"" -> ok;
-	"stop_all_and_delete_mnesia" -> ok;
-	"rebind_all" -> ok;
-	"n_new_subs " ++ Params ->
-	    {match, [Id, Accessor, Url, Feed, Count]} = re:run(Params, "(?<Id>.+) (?<Accessor>.+) (?<Url>.+) (?<Feed>.+) (?<Count>.+)", [{capture,['Id', 'Accessor', 'Url', 'Feed', 'Count'], list}]),
-	    lists:map(fun(IdNum) -> 
-			      send_message(To, 
-					   jlib:string_to_jid("aggregator." ++ get_host()),
-					   "chat",
-					   create_json_subscription(Url, Accessor, Feed, Id ++ "-" ++ integer_to_list(IdNum)))
-		      end,
-		      lists:seq(1, list_to_integer(Count))),
-	    ok;
-	"subs_from_file " ++ Params ->
-	    {match, [Count, Accessor, Batchname]} = re:run(Params, "(?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Count', 'Accessor', 'Batchname'], list}]),
-	    send_subscriptions(list_to_integer(Count), Accessor, Batchname),
-	    ok;
-	"subs_from_file_bulk " ++ Params ->
-	    {match, [Count, Accessor, Batchname]} = re:run(Params, "(?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Count', 'Accessor', 'Batchname'], list}]),
-	    send_subscriptions_bulk(list_to_integer(Count), Accessor, Batchname),
-	    ok;
-	"unsubscribe_bulk " ++ Params ->
-	    {match, [Name, Start, Stop]} = re:run(Params, "(?<Name>.+) (?<Start>.+) (?<Stop>.+)",
-						 [{capture, ['Name', 'Start', 'Stop'], list}]),
-	    send_unsubscribe_bulk(Name, Start, Stop),
-	    ok;
-	"update_subscription " ++ Params ->
-	    {match, [Url, Accessor, Feed, Name]} = re:run(Params, "(?<Url>.+) (?<Accessor>.+) (?<Feed>.+) (?<Name>.+)", [{capture, ['Url', 'Accessor', 'Feed', 'Name'], list}]),
-	    send_update_subscription(Url, Accessor, Feed, Name);
-	"emigrate " ++ Params ->
-	    {match, [Source, Destination, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
-	    send_emigrate(Source, Destination, Id)
+    case xml:get_tag_attr_s("type", Packet) of "chat" ->
+	    case xml:get_subtag_cdata(Packet, "body") of
+		"" -> ok;
+		"stop_all_and_delete_mnesia" -> ok;
+		"rebind_all" -> ok;
+		"n_new_subs " ++ Params ->
+		    {match, [Id, Accessor, Url, Feed, Count]} = re:run(Params, "(?<Id>.+) (?<Accessor>.+) (?<Url>.+) (?<Feed>.+) (?<Count>.+)", [{capture,['Id', 'Accessor', 'Url', 'Feed', 'Count'], list}]),
+		    lists:map(fun(IdNum) -> 
+				      send_message(To, 
+						   jlib:string_to_jid("aggregator." ++ get_host()),
+						   "chat",
+						   create_json_subscription(Url, Accessor, Feed, Id ++ "-" ++ integer_to_list(IdNum)))
+			      end,
+			      lists:seq(1, list_to_integer(Count))),
+		    ok;
+		"subs_from_file " ++ Params ->
+		    {match, [Count, Accessor, Batchname]} = re:run(Params, "(?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Count', 'Accessor', 'Batchname'], list}]),
+		    send_subscriptions(list_to_integer(Count), Accessor, Batchname),
+		    ok;
+		"subs_from_file_bulk " ++ Params ->
+		    {match, [Count, Accessor, Batchname]} = re:run(Params, "(?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Count', 'Accessor', 'Batchname'], list}]),
+		    send_subscriptions_bulk(list_to_integer(Count), Accessor, Batchname),
+		    ok;
+		"unsubscribe_bulk " ++ Params ->
+		    {match, [Name, Start, Stop]} = re:run(Params, "(?<Name>.+) (?<Start>.+) (?<Stop>.+)",
+							  [{capture, ['Name', 'Start', 'Stop'], list}]),
+		    send_unsubscribe_bulk(Name, Start, Stop),
+		    ok;
+		"update_subscription " ++ Params ->
+		    {match, [Url, Accessor, Feed, Name]} = re:run(Params, "(?<Url>.+) (?<Accessor>.+) (?<Feed>.+) (?<Name>.+)", [{capture, ['Url', 'Accessor', 'Feed', 'Name'], list}]),
+		    send_update_subscription(Url, Accessor, Feed, Name);
+		"emigrate " ++ Params ->
+		    {match, [Source, Destination, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
+		    send_emigrate(Source, Destination, Id)
+	    end;
+	"PrismaMessage" ->
+	    case json_eep:json_to_term(xml:get_subtag_cdata(Packet, "body")) of
+		{[{<<"class">>,<<"de.prisma.datamodel.message.ErrorMessage">>},
+		  {<<"subscriptionID">>, SubId},
+		  {<<"errorType">>, _Type},
+		  {<<"errorDescription">>, _Desc}]} ->
+		    send_iq(get_sender(),
+			    get_aggregator(),
+			    "unsubscribe",
+			    json_eep:term_to_json(binary_to_list(SubId)));
+	
+		{[{<<"class">>,<<"de.prisma.datamodel.message.Message">>},
+		  {<<"id">>,null},
+		  {<<"messageID">>,null},
+		  {<<"messageParts">>,
+		   [{[{<<"class">>,<<"de.prisma.datamodel.message.MessagePart">>},
+		      {<<"content">>,
+		       _Content},
+		      {<<"contentType">>,<<"text">>},
+		      {<<"encoding">>,null},
+		      {<<"id">>,null}]}]},
+		  {<<"priority">>,null},
+		  {<<"publicationDate">>,null},
+		  {<<"receivingDate">>, _ReceivingDate},
+		  {<<"recipient">>,null},
+		  {<<"sender">>,null},
+		  {<<"subscriptionID">>,_SubId},
+		  {<<"title">>,null}]} -> 
+		    ok
+	    end
     end,
     ok;
 

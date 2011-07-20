@@ -460,7 +460,7 @@ message_to_accessor(Msg, #state{subscription = Sub}) ->
 message_to_accessor(Msg, Sub) ->
     mod_prisma_aggregator:send_message(Sub#subscription.host,
 				       Sub#subscription.accessor,
-				       "chat", %TODO
+				       "PrismaMessage", %TODO
 				       Msg).
 
 message_to_controller(Msg, #state{subscription = Sub}) ->
@@ -469,7 +469,7 @@ message_to_controller(Msg, #state{subscription = Sub}) ->
 message_to_controller(Msg, Sub) ->
     catch mod_prisma_aggregator:send_message(Sub#subscription.host,
 					     jlib:string_to_jid(get_controller()),
-					     "chat", %TODO
+					     "PrismaMessage", %TODO
 					     json_eep:term_to_json(Msg)).
 log(Msg, Vars) ->
     ?INFO_MSG(Msg, Vars).

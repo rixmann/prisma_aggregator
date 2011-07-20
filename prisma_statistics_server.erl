@@ -138,7 +138,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 		  true -> 0
 	       end,
 	       SubCnt div 100,
-	       Psubs_sec,%NPsubs,
+	       Psubs_sec,
 	       try %speicherverbrauch, wird durch shell-aufruf geholt
 		   list_to_integer(string:substr(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz="), 2, length(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz=")) -2)) div (1024 * 10)
 	       catch
