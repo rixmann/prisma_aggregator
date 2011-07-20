@@ -122,7 +122,10 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		  {<<"sender">>,null},
 		  {<<"subscriptionID">>,_SubId},
 		  {<<"title">>,null}]} -> 
+		    ok;
+		_ -> 
 		    ok
+		
 	    end
     end,
     ok;
