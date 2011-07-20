@@ -6,14 +6,14 @@
 	 format_date/0, get_timestamp/0,
 	 get_polltime/0,
 	 callbacktimer_callback_fn/2,
-	 get_controller/0]).
+	 get_coordinator/0]).
 
 get_host() ->
     [{host, Ret}] = ets:lookup(?CFG, host),
     Ret.
 
-get_controller() ->
-    [{controller, Ret}] = ets:lookup(?CFG, controller),
+get_coordinator() ->
+    [{coordinator, Ret}] = ets:lookup(?CFG, coordinator),
     Ret.
 
 get_polltime() ->

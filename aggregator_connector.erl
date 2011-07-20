@@ -169,31 +169,31 @@ handle_cast(go_get_messages, State) ->
 	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
 	{error, retry_later} -> 
 	    prisma_statistics_server:signal_httpc_overload(),
-	    %message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+	    %message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 	%					      -2,
 	%					      <<"To many Http-Requests, system overloaded">>),
 	%			  Sub),
 	    agr:callbacktimer(100, go_get_messages);
 	{error, req_timedout} -> 
-	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, timeout">>),
 				  Sub),
 	    agr:callbacktimer(get_polltime(State), go_get_messages);
 	{error, {conn_failed, {error, timeout}}} -> 
-	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, connection failed -> timeout">>),
 				  Sub),
 	    agr:callbacktimer(get_polltime(State), go_get_messages);
 	{error, {conn_failed, {error, _}}} -> 
-	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, connection failed">>),
 				  Sub),
 	    agr:callbacktimer(random, go_get_messages, 10 * get_polltime(State));
 	{error, _Reason} ->
-	    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						      -2,
 						      <<"Network error, undefinded">>),
 				  Sub),
@@ -201,7 +201,7 @@ handle_cast(go_get_messages, State) ->
 	    agr:callbacktimer(random, go_get_messages);
 	{'EXIT', _} -> agr:callbacktimer(5, go_get_messages);
 	Val -> log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
-	       message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+	       message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 							 -2,
 							 <<"Network error, undefinded">>),
 				     Sub),
@@ -256,7 +256,7 @@ handle_info({_Ref, {error, _}} = _F, State) ->
 						%log("handle info on ~p, error:~n~p anzahl callbacks:~n~p", [get_id(State), F, Content]),
     
 						%ets:delete(get_callbacks(State), Ref),
-    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 					      -2,
 					      <<"Network error, undefinded">>),
 			  State),
@@ -368,7 +368,7 @@ handle_http_response(initial_get_stream, Body, State) ->
     Sub = State#state.subscription,
     Ret = case xml_stream:parse_element(Body) of
 	      {error, {_, _Reason}} -> 
-		  message_to_controller(create_prisma_error(list_to_binary(get_id(Sub)),
+		  message_to_coordinator(create_prisma_error(list_to_binary(get_id(Sub)),
 							    -1,
 							    <<"Stream returned invalid XML">>),
 					Sub),
@@ -406,7 +406,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 		      {noreply, State#state{subscription = NSub}}
 		  catch
 		      _Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
-			  message_to_controller(create_prisma_error(list_to_binary(get_id(Sub)),
+			  message_to_coordinator(create_prisma_error(list_to_binary(get_id(Sub)),
 								    -1,
 								    <<"Error while trying to interpret XML">>),
 						Sub),
@@ -423,7 +423,7 @@ handle_http_response({couch_doc_store_reply, _Doclist}, _Body, State) ->
 
 handle_http_response(_, {error, _Reason}, State) ->
     log("Worker ~p received an polling error: ~n~p", [get_id(State), _Reason]),
-    message_to_controller(create_prisma_error(list_to_binary(get_id(State)),
+    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 					      -2,
 					      list_to_binary(_Reason)),
 			  State),
@@ -463,12 +463,12 @@ message_to_accessor(Msg, Sub) ->
 				       "PrismaMessage", %TODO
 				       Msg).
 
-message_to_controller(Msg, #state{subscription = Sub}) ->
-    message_to_controller(Msg, Sub);
+message_to_coordinator(Msg, #state{subscription = Sub}) ->
+    message_to_coordinator(Msg, Sub);
 
-message_to_controller(Msg, Sub) ->
+message_to_coordinator(Msg, Sub) ->
     catch mod_prisma_aggregator:send_message(Sub#subscription.host,
-					     jlib:string_to_jid(get_controller()),
+					     jlib:string_to_jid(get_coordinator()),
 					     "PrismaMessage", %TODO
 					     json_eep:term_to_json(Msg)).
 log(Msg, Vars) ->
@@ -534,9 +534,9 @@ create_prisma_error(SubId, Type, Desc) ->
       {<<"errorType">>, Type},
       {<<"errorDescription">>, Desc}]}.
 
-get_controller() ->
+get_coordinator() ->
     %"aggregatortester." ++ agr:get_host().
-    agr:get_controller().
+    agr:get_coordinator().
 
 get_polltime(#state{subscription = Sub}) ->
     Polltime = Sub#subscription.polltime,
