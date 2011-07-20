@@ -127,7 +127,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
     Runtime = RuntimeStart - Rto,
     Walltime = Walltime1970 - To,
     Nload = trunc(100 * Runtime / Walltime),
-    Psubs_sec = Psubs / (Walltime / 1000),
+    Psubs_sec = trunc(Psubs / (Walltime / 1000)),
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
 	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
