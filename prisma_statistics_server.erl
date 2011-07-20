@@ -126,7 +126,8 @@ handle_cast(collect_stats, State = #state{device = Dev,
 					  old_load = Oload,
 					  subscription_count = SubCnt,
 					  proceeded_subs = Psubs,
-					  proceeded_subs_old = Psubs_old}) ->
+					  proceeded_subs_old = Psubs_old,
+					  walltime_init = Walltime_init}) ->
     {RuntimeStart, _} = statistics(runtime),
     {Walltime1970, _} = statistics(wall_clock),
     Runtime = RuntimeStart - Rto,
@@ -136,7 +137,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
 	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
-	      [trunc(Runtime div 100), %(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
+	      [trunc((Walltime1970 - Walltime_init) div 100), %(agr:get_timestamp() - To) div 100000, %runtime in 10th of seconds
 	       statistics(run_queue),                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
 	       if Httpc_overload -> 1;
