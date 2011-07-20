@@ -50,7 +50,7 @@ unsubscribe(Id) ->
 	not_found -> 
 	    catch delete_subscription(Id),
 	    not_found;
-	Pid -> gen_server:call(Pid, unsubscribe)
+	Pid -> catch gen_server:call(Pid, unsubscribe) % catch wegen timeout...
     end.
 
 start_worker(Id) ->
