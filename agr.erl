@@ -4,7 +4,8 @@
 
 -export([get_host/0, callbacktimer/2, callbacktimer/3,
 	 format_date/0, get_timestamp/0,
-	 get_polltime/0]).
+	 get_polltime/0,
+	 callbacktimer_callback_fn/2]).
 
 get_host() ->
     [{host, Ret}] = ets:lookup(?CFG, host),
@@ -22,13 +23,10 @@ callbacktimer(random, Callback) ->
     callbacktimer(random, Callback, 0);
 callbacktimer(Time, Callback) ->
     Caller = self(),
-    F = fun() ->
-		receive
-		after Time ->
-			gen_server:cast(Caller, Callback)
-		end
-	end,
-    spawn(F).
+    timer:apply_after(Time, agr, callbacktimer_callback_fn, [Caller, Callback]).
+
+callbacktimer_callback_fn(Caller, Callback) ->
+    gen_server:cast(Caller, Callback).
 
 format_date() -> 
     {{Y, M, D}, {H, Min, S}} = erlang:localtime(), 

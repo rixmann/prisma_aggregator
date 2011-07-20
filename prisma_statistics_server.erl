@@ -31,7 +31,8 @@
 		old_load = 0,
 		subscription_count = 0,
 		proceeded_subs,
-		proceeded_subs_old}).
+		proceeded_subs_old,
+		walltime_init}).
 
 %%====================================================================
 %% API
@@ -76,12 +77,13 @@ init([]) ->
     {RuntimeStart, _} = statistics(runtime),
     {Walltime1970, _} = statistics(wall_clock),
     {ok, #state{device = Device, 
-%		timestamp_offset = agr:get_timestamp(),
+						%		timestamp_offset = agr:get_timestamp(),
 		subscription_count = 0,
 		proceeded_subs = 0,
 		proceeded_subs_old = 0,
 		timestamp_offset = Walltime1970,
-		runtime_offset = RuntimeStart}}.
+		runtime_offset = RuntimeStart,
+		walltime_init = Walltime1970}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
