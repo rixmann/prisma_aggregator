@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>heise online News</title>
+  <subtitle>Nachrichten nicht nur aus der Welt der Computer</subtitle>
+  <link href="http://www.heise.de/newsticker/" />
+  <link rel="self" href="http://www.heise.de/newsticker/heise-atom.xml" />
+  <updated>2011-07-30T16:54:19+02:00</updated>
+  <author>
+    <name>heise online</name>
+    </author>
+  <id>http://www.heise.de/newsticker/</id>
+
+<entry>
+  <title>Microsoft plädiert für &quot;Open Surface&quot;</title>
+  <link href="http://www.heise.de/newsticker/meldung/Microsoft-plaediert-fuer-Open-Surface-1288890.html/from/atom10" />
+  <id>http://www.heise.de/newsticker/meldung/Microsoft-plaediert-fuer-Open-Surface-1288890.html/from/atom10</id>
+  <published>2011-07-30T15:53:00+02:00</published>
+  <updated>2011-07-30T16:54:19+02:00</updated>
+  
+  
+  </entry>
+
+</feed>
+
