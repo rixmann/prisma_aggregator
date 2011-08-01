@@ -74,7 +74,7 @@ stop_all_and_delete_mnesia() ->
     Ids = mnesia:dirty_all_keys(?PST),
     lists:map(fun(Id) -> stop(Id) end, Ids),
     {atomic, ok} = mnesia:delete_table(?PST),
-    {atomic, ok} = mnesia:delete_table(?SPT).
+    true = ets:delete(?SPT).
 
 rebind_all(To) ->
     Ids = mnesia:dirty_all_keys(?PST),
@@ -98,7 +98,6 @@ emigrate(To, Id) ->
 
 immigrate(Sub, From) ->
     new_subscription(Sub),
-    %?INFO_MSG("immigrierende subscription: ~n~p", [Sub]),
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
 				  From,
 				  "unsubscribe",
@@ -112,7 +111,7 @@ init([SubOrId]) ->
     Id = get_id_from_subscription_or_id(SubOrId),
     log("Worker ~p starting", [Id]),
     process_flag(trap_exit, true),
-    F = fun() -> ok = mnesia:write(?SPT, #process_mapping{key = Id, pid = self()}, write),
+    F = fun() -> true = ets:insert(?SPT, {Id, self()}),
 		 case mnesia:read(?PST, Id) of
 		     [] ->     if
 				   Id =/= SubOrId -> ok = mnesia:write(?PST, SubOrId, write)
@@ -280,8 +279,7 @@ handle_info(_Info, State) ->
 
 
 terminate(_Reason, State) ->
-    F = fun() -> mnesia:delete({?SPT, get_id(State)}) end, 
-    mnesia:transaction(F),
+    true = delete:delete({?SPT, get_id(State)}), 
     prisma_statistics_server:subscription_remove(),
     ?INFO_MSG("Worker stopping, id: ~p~n", [get_id(State)]),
     ok.
@@ -295,12 +293,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 
 get_pid_from_id(Id) ->
-    F = fun() ->
-		mnesia:read(?SPT, Id)
-	end,
     try
-	{atomic, [#process_mapping{pid=Pid}]} = mnesia:transaction(F),
-	Pid
+	case ets:lookup(?SPT, Id) of
+	    [Pid] -> Pid;
+	    [] -> not_found
+	end
     catch
 	_:_ -> not_found
     end.

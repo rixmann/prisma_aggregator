@@ -14,6 +14,7 @@
 %% gen_mod implementation
 start(Host, Opts) ->
     ?INFO_MSG("mod_prisma_aggregator starting!, options:~n~p", [Opts]),
+    ets:new(?SPT, [named_table, protected, set, {keypos, 1}]),
     ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?CFG,{host, Host}),
     [_Accessor, _Coordinator, _DebugLvl, _Polltime] = %read config and store values in ?CFG ets, local config may be found in gen_server's Status
@@ -65,7 +66,7 @@ stop(_Host) ->
     supervisor:terminate_child(ejabberd_sup, prisma_statistics_server),
     supervisor:delete_child(ejabberd_sup, prisma_statistics_server),
     ibrowse:stop(),
-    {atomic, ok} = mnesia:delete_table(?SPT),
+    true = ets:delete(?SPT),
     inets:stop(httpc, ?INETS),
     inets:stop(),
     ?INFO_MSG("mod_prisma_aggregator stopped", []),
@@ -179,7 +180,7 @@ send_iq(From, To, TypeStr, BodyStr) ->
 
 
 setup_mnesia() ->
-    setup_mnesia(?SPT, fun() -> mnesia:create_table(?SPT, [{attributes, record_info(fields, process_mapping)}]) end),
+%    setup_mnesia(?SPT, fun() -> mnesia:create_table(?SPT, [{attributes, record_info(fields, process_mapping)}]) end),
     setup_mnesia(?PST, fun() ->mnesia:create_table(?PST, [{attributes, record_info(fields, subscription)},
 							  {disc_copies, [node()]}]) end).
 
