@@ -67,11 +67,11 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		    ok;
 		"subs_from_file " ++ Params ->
 		    {match, [Count, Accessor, Batchname]} = re:run(Params, "(?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Count', 'Accessor', 'Batchname'], list}]),
-		    send_subscriptions(list_to_integer(Count), Accessor, Batchname),
+		    send_subscriptions_file(list_to_integer(Count), Accessor, Batchname),
 		    ok;
 		"subs_from_file_bulk " ++ Params ->
 		    {match, [Count, Accessor, Batchname]} = re:run(Params, "(?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Count', 'Accessor', 'Batchname'], list}]),
-		    send_subscriptions_bulk(list_to_integer(Count), Accessor, Batchname),
+		    send_subscriptions_bulk_file(list_to_integer(Count), Accessor, Batchname),
 		    ok;
 		"unsubscribe_bulk " ++ Params ->
 		    {match, [Name, Start, Stop]} = re:run(Params, "(?<Name>.+) (?<Start>.+) (?<Stop>.+)",
@@ -83,7 +83,46 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		    send_update_subscription(Url, Accessor, Feed, Name);
 		"emigrate " ++ Params ->
 		    {match, [Source, Destination, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
-		    send_emigrate(Source, Destination, Id)
+		    send_emigrate(Source, Destination, Id);
+		"test_hohes_1 " ++ Aggregator ->
+		    GenSubs = fun(Start, Count) ->
+				      [create_json_subscription("http://127.0.0.1:8000/index.yaws", 
+								jlib:jid_to_string(get_sender()), 
+								"ATOM", 
+								"test_hohes_1-" ++ integer_to_list(I)) 
+				       || I <- lists:seq(Start, Count)]
+			      end,
+		    SendSubs = fun(Start, Count) ->
+				       send_iq(get_sender(), 
+					       jlib:string_to_jid(Aggregator),
+					       "subscribeBulk",
+					       json_eep:term_to_json(GenSubs(Start,Count)))
+			       end,
+		    SendSubs(1,1000),
+		    timer:sleep(120000),
+		    SendSubs(1001,2000),
+		    timer:sleep(120000),
+		    SendSubs(2001,3000),
+		    timer:sleep(120000),
+		    SendSubs(3001,4000),
+		    timer:sleep(120000),
+		    SendSubs(4001,5000),
+		    timer:sleep(120000),
+		    SendSubs(5001,6000),
+		    timer:sleep(120000),
+		    SendSubs(6001,7000),
+		    timer:sleep(120000),
+		    SendSubs(7001,8000),
+		    timer:sleep(120000),
+		    SendSubs(8001,9000),
+		    timer:sleep(120000),
+		    SendSubs(9001,10000),
+		    timer:sleep(120000),
+		    SendSubs(10001,11000),
+		    timer:sleep(120000),
+		    SendSubs(11001,12000),
+		    timer:sleep(120000),
+		    SendSubs(12001,13000)
 	    end;
 	"PrismaMessage" ->
 	    JSON = try
@@ -194,7 +233,7 @@ create_json_subscription(Url, Accessor, SourceType, Id) ->
 	 {<<"sourceType">>, list_to_binary(SourceType)}]}},
       {<<"subscriptionID">>, list_to_binary(Id)}]}.
 
-send_subscriptions(Count, Accessor, Batchname) ->
+send_subscriptions_file(Count, Accessor, Batchname) ->
     {ok, Device} = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
     F = fun(Line, N) ->
 		URI = lists:sublist(Line, 1, length(Line) -1),
@@ -209,7 +248,7 @@ send_subscriptions(Count, Accessor, Batchname) ->
 	end,
     spawn(?MODULE, map_to_n_lines, [Device, Count, F]).
 
-send_subscriptions_bulk(Count, Accessor, Batchname) ->
+send_subscriptions_bulk_file(Count, Accessor, Batchname) ->
     {ok, Device} = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
     F = fun(Line, N) ->
 		URI = lists:sublist(Line, 1, length(Line) -1),
