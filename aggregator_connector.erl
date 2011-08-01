@@ -111,8 +111,8 @@ init([SubOrId]) ->
     Id = get_id_from_subscription_or_id(SubOrId),
     log("Worker ~p starting", [Id]),
     process_flag(trap_exit, true),
-    F = fun() -> true = ets:insert(?SPT, {Id, self()}),
-		 case mnesia:read(?PST, Id) of
+    true = ets:insert(?SPT, {Id, self()}),
+    F = fun() -> case mnesia:read(?PST, Id) of
 		     [] ->     if
 				   Id =/= SubOrId -> ok = mnesia:write(?PST, SubOrId, write)
 			       end,
