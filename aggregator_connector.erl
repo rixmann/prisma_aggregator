@@ -30,7 +30,7 @@
 
 -record(state, 
 	{subscription = #subscription{},
-	 callbacks = dict:new()}).
+	 callbacks}).
 
 %%====================================================================
 %% API
@@ -124,7 +124,7 @@ init([SubOrId]) ->
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
     agr:callbacktimer(random, go_get_messages, 5000),
-    Callbacks = dict:new(),
+    Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
     ibrowse:set_max_pipeline_size(Host, Port, 1),
     prisma_statistics_server:subscription_add(),
@@ -160,66 +160,58 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
     ok = mnesia:dirty_write(?PST, Nsub),
     {noreply, State#state{subscription=Nsub}};
 
-handle_cast(go_get_messages, State = #state{subscription = Sub,
-					    callbacks = Callbacks}) ->
-    NewCallbacks = case 
-		       try 
-			   ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLL_TIMEOUT) 
-		       catch 
-			   _ : _ -> Callbacks
-		       end 
-		   of
-		       {ibrowse_req_id, RequestId} ->
-			   prisma_statistics_server:signal_httpc_ok(),
-			   dict:store(RequestId, {initial_get_stream, []}, Callbacks);
-		       {error, retry_later} -> 
-			   prisma_statistics_server:signal_httpc_overload(),
+handle_cast(go_get_messages, State = #state{subscription = Sub}) ->
+    case 
+	try 
+	    ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLL_TIMEOUT) 
+	catch 
+	    _ : _ -> fail
+	end 
+    of
+	{ibrowse_req_id, RequestId} ->
+	    prisma_statistics_server:signal_httpc_ok(),
+	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
+	{error, retry_later} -> 
+	    prisma_statistics_server:signal_httpc_overload(),
 						%message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						%					      -2,
 						%					      <<"To many Http-Requests, system overloaded">>),
 						%			  Sub),
-			   agr:callbacktimer(100, go_get_messages),
-			   Callbacks;
-		       {error, req_timedout} -> 
-			   message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
-								      -2,
-								      <<"Network error, timeout">>),
-						  Sub),
-			   agr:callbacktimer(get_polltime(State), go_get_messages),
-			   Callbacks;
-		       {error, {conn_failed, {error, timeout}}} -> 
-			   message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
-								      -2,
-								      <<"Network error, connection failed -> timeout">>),
-						  Sub),
-			   agr:callbacktimer(get_polltime(State), go_get_messages),
-			   Callbacks;
-		       {error, {conn_failed, {error, _}}} -> 
-			   message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
-								      -2,
-								      <<"Network error, connection failed">>),
-						  Sub),
-			   agr:callbacktimer(random, go_get_messages, 10 * get_polltime(State)),
-			   Callbacks;
-		       {error, _Reason} ->
-			   message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
-								      -2,
-								      <<"Network error, undefinded">>),
-						  Sub),
+	    agr:callbacktimer(100, go_get_messages);
+	{error, req_timedout} -> 
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
+						       -2,
+						       <<"Network error, timeout">>),
+				   Sub),
+	    agr:callbacktimer(get_polltime(State), go_get_messages);
+	{error, {conn_failed, {error, timeout}}} -> 
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
+						       -2,
+						       <<"Network error, connection failed -> timeout">>),
+				   Sub),
+	    agr:callbacktimer(get_polltime(State), go_get_messages);
+	{error, {conn_failed, {error, _}}} -> 
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
+						       -2,
+						       <<"Network error, connection failed">>),
+				   Sub),
+	    agr:callbacktimer(random, go_get_messages, 10 * get_polltime(State));
+	{error, _Reason} ->
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
+						       -2,
+						       <<"Network error, undefinded">>),
+				   Sub),
 						%	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
-			   agr:callbacktimer(random, go_get_messages),
-			   Callbacks;
-		       {'EXIT', _} -> agr:callbacktimer(5, go_get_messages),
-				      Callbacks;
-		       Val -> log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
-			      message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
-									 -2,
-									 <<"Network error, undefinded">>),
-						     Sub),
-			      agr:callbacktimer(5, go_get_messages),
-			      Callbacks
-		   end,
-    {noreply, State#state{callbacks = NewCallbacks}};
+	    agr:callbacktimer(random, go_get_messages);
+	{'EXIT', _} -> agr:callbacktimer(5, go_get_messages);
+	Val -> log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
+	       message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
+							  -2,
+							  <<"Network error, undefinded">>),
+				      Sub),
+	       agr:callbacktimer(5, go_get_messages)
+    end,
+    {noreply, State};
 
 handle_cast(stop, State) ->
     {stop, normal, State};
@@ -235,22 +227,22 @@ handle_info({ibrowse_async_headers, _ReqId, _, _}, State) ->
     {noreply, State};
 
 handle_info({ibrowse_async_response, ReqId, Content}, State = #state{callbacks = Callbacks}) ->
-    NC = case dict:find(ReqId, Callbacks) of
-	     {ok, {Hook, List}} ->
-		 dict:store(ReqId, {Hook, [Content | List]}, Callbacks);
-	     error -> log("~p didn't find request id in callbacks for http-async-resp!!", [get_id(State)]),
-		      Callbacks
-	 end,
-    {noreply, State#state{callbacks = NC}};
+    case ets:lookup(Callbacks, ReqId) of
+	[{_, {Hook, List}}] ->
+	    ets:insert(get_callbacks(State), {ReqId, {Hook, [Content | List]}});
+	[] -> 
+	    log("~p didn't find request id in callbacks for http-async-resp!!", [get_id(State)])
+    end,
+    {noreply, State};
 
 	
-handle_info({ibrowse_async_response_end, ReqId} , State = #state{callbacks = Callbacks}) ->
-    case dict:find(ReqId, Callbacks) of
-	{ok, {Hook, List}} ->
+handle_info({ibrowse_async_response_end, ReqId} , State) ->
+    case ets:lookup(get_callbacks(State), ReqId) of
+	[{_, {Hook, List}}] ->
 	    Content = lists:flatten(lists:reverse(List)),
-	    dict:erase(ReqId,Callbacks),
+	    ets:delete(get_callbacks(State), ReqId),
 	    handle_http_response(Hook, Content, State);
-	error -> 
+	[] -> 
 	    log("~p didn't find req-id in callbacks for http-end", [get_id(State)]),
 	    agr:callbacktimer(get_polltime(State), go_get_messages),
 	    {noreply, State}
@@ -388,34 +380,33 @@ handle_http_response(initial_get_stream, Body, State) ->
 				    _ -> parse_rss(Xml)
 				end,
 		      NewContent = extract_new_messages(Content, Sub),
-		      {NSub, NC} = if
-					       length(NewContent) > 0 ->
-						   lists:map(fun(Val) -> 
-								     message_to_accessor(json_eep:term_to_json(create_prisma_message(list_to_binary(get_id(State)),
-																     list_to_binary(proplists:get_value(title, Val)))),
-											 State)
-							     end, 
-							     NewContent),
-						   EnrichedContent = lists:map(fun([H|T]) ->
-										       [{subId, get_id(Sub)},
-											{feed, Sub#subscription.source_type},
-											{date, agr:format_date()},
-											H | T]
-									       end, NewContent),
-						   NCallbacks = store_to_couch(EnrichedContent, State),
-						   StoreSub = Sub#subscription{last_msg_key = merge_keys(Content, Sub#subscription.last_msg_key)},
-						   ok = mnesia:dirty_write(StoreSub),
-						   {StoreSub, NCallbacks};
-					       true -> 
-						   {Sub, State#state.callbacks}
-					   end,
+		      NSub = if
+				 length(NewContent) > 0 ->
+				     lists:map(fun(Val) -> 
+						       message_to_accessor(json_eep:term_to_json(create_prisma_message(list_to_binary(get_id(State)),
+														       list_to_binary(proplists:get_value(title, Val)))),
+									   State)
+					       end, 
+					       NewContent),
+				     EnrichedContent = lists:map(fun([H|T]) ->
+									 [{subId, get_id(Sub)},
+									  {feed, Sub#subscription.source_type},
+									  {date, agr:format_date()},
+									  H | T]
+								 end, NewContent),
+				     ok = store_to_couch(EnrichedContent, State),
+				     StoreSub = Sub#subscription{last_msg_key = merge_keys(Content, Sub#subscription.last_msg_key)},
+				     ok = mnesia:dirty_write(StoreSub),
+				     StoreSub;
+				 true -> 
+				     Sub
+			     end,
 		      agr:callbacktimer(get_polltime(State), go_get_messages),
-		      {noreply, State#state{subscription = NSub,
-					    callbacks = NC}}
+		      {noreply, State#state{subscription = NSub}}
 		  catch
 		      _Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
 			  message_to_coordinator(create_prisma_error(list_to_binary(get_id(Sub)),
-								    -1,
+								     -1,
 								     <<"Error while trying to interpret XML">>),
 						 Sub),
 			  agr:callbacktimer(get_polltime(State), go_get_messages),
@@ -492,7 +483,8 @@ store_to_couch(Doclist ,State) ->
 						   Jstring,
 						   [{stream_to, self()}], 
 						   1000),
-    dict:store(RequestId, {{couch_doc_store_reply, Doclist}, []}, get_callbacks(State)).
+    true = ets:insert(get_callbacks(State), {RequestId, {{couch_doc_store_reply, Doclist}, []}}),
+    ok.
 
 doclist_to_json(Doclist) ->
     lists:map(fun(Item) -> 
