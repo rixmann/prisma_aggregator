@@ -295,7 +295,7 @@ code_change(_OldVsn, State, _Extra) ->
 get_pid_from_id(Id) ->
     try
 	case ets:lookup(?SPT, Id) of
-	    [Pid] -> Pid;
+	    [{Id, Pid}] -> Pid;
 	    [] -> not_found
 	end
     catch
