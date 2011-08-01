@@ -9,6 +9,9 @@
 
 -behaviour(gen_server).
 
+-include("prisma_aggregator.hrl").
+-include("jlib.hrl").
+
 %% API
 -export([start_link/0]).
 
