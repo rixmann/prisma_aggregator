@@ -2,6 +2,7 @@
 
 -behavior(gen_mod).
 
+%% API
 -include("prisma_aggregator.hrl").
 -include("jlib.hrl").
 -define(TCFG, aggregator_tester_config).
@@ -16,6 +17,13 @@ start(Host, Opts) ->
     ets:insert(?TCFG,{host, Host}),
     Aggregator = proplists:get_value(aggregator, Opts),
     ets:insert(?TCFG, {aggregator, jlib:string_to_jid(Aggregator)}),
+    ServSpec = {prisma_test_server,
+		{prisma_test_server, start_link, []},
+		permanent,
+		1000,
+		worker,
+		[prisma_test_server]},
+    {ok, _} = supervisor:start_child(ejabberd_sup, ServSpec),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
    ok.
 
@@ -84,45 +92,9 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		"emigrate " ++ Params ->
 		    {match, [Source, Destination, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
 		    send_emigrate(Source, Destination, Id);
-		"test_hohes_1 " ++ Aggregator ->
-		    GenSubs = fun(Start, Count) ->
-				      [create_json_subscription("http://127.0.0.1:8000/index.yaws", 
-								jlib:jid_to_string(get_sender()), 
-								"ATOM", 
-								"test_hohes_1-" ++ integer_to_list(I)) 
-				       || I <- lists:seq(Start, Count)]
-			      end,
-		    SendSubs = fun(Start, Count) ->
-				       send_iq(get_sender(), 
-					       jlib:string_to_jid(Aggregator),
-					       "subscribeBulk",
-					       json_eep:term_to_json(GenSubs(Start,Count)))
-			       end,
-		    SendSubs(1,1000),
-		    timer:sleep(120000),
-		    SendSubs(1001,2000),
-		    timer:sleep(120000),
-		    SendSubs(2001,3000),
-		    timer:sleep(120000),
-		    SendSubs(3001,4000),
-		    timer:sleep(120000),
-		    SendSubs(4001,5000),
-		    timer:sleep(120000),
-		    SendSubs(5001,6000),
-		    timer:sleep(120000),
-		    SendSubs(6001,7000),
-		    timer:sleep(120000),
-		    SendSubs(7001,8000),
-		    timer:sleep(120000),
-		    SendSubs(8001,9000),
-		    timer:sleep(120000),
-		    SendSubs(9001,10000),
-		    timer:sleep(120000),
-		    SendSubs(10001,11000),
-		    timer:sleep(120000),
-		    SendSubs(11001,12000),
-		    timer:sleep(120000),
-		    SendSubs(12001,13000)
+		"test " ++ Params ->
+		    {match, [Aggregator, TestNumber]} = re:run(Params, "(?<Ag>.+) (?<Tn>.+)", [{capture, ['Ag', 'Tn'], list}]),
+		    prisma_test_server:start_test(Aggregator, TestNumber)
 	    end;
 	"PrismaMessage" ->
 	    JSON = try
@@ -306,3 +278,4 @@ send_emigrate(From, To, Id) ->
 get_sender() ->
     jlib:string_to_jid("aggregatortester." ++ get_host()).
     
+
