@@ -33,7 +33,7 @@
 %% Description: Starts the server
 %%--------------------------------------------------------------------
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+    gen_server:start_link(?MODULE, [], []).
 
 message_received(Message) ->
     gen_server:call(?MODULE, {message_received, Message}).
