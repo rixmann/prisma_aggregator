@@ -84,7 +84,7 @@ handle_call({run_test, {Test, {Aggregator, Count}}}, _From, State) ->
 						 jlib:string_to_jid(Aggregator),
 						 "subscribeBulk",
 						 json_eep:term_to_json(Subs)),
-	    Timer = timer:apply_after(120000, gen_server, call, [?MODULE, {run_test, {hohes_aufkommen, Count + 1000}}]),
+	    Timer = timer:apply_after(120000, gen_server, call, [?MODULE, {run_test, {hohes_aufkommen, {Aggregator, Count + 1000}}}]),
 	    ?INFO_MSG("Test: Hohes Aufkommen, neue Nachrichten werden verschickt ~p~nTimer: ~p", [Count + 1000, Timer]),
 	    {reply, ok, State}
     end;
