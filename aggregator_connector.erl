@@ -112,6 +112,7 @@ init([SubOrId]) ->
     log("Worker ~p starting", [Id]),
     process_flag(trap_exit, true),
     true = ets:insert(?SPT, {Id, self()}),
+    log("pid in ?SPT eingetragen : ~p", [Id]),
     F = fun() -> case mnesia:read(?PST, Id) of
 		     [] ->     if
 				   Id =/= SubOrId -> ok = mnesia:write(?PST, SubOrId, write)
