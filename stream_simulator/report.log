@@ -1,0 +1,642 @@
+
+=INFO REPORT==== 30-Jul-2011::21:42:18 ===
+Keeping conf for http://localhost:8000 intact
+
+=INFO REPORT==== 30-Jul-2011::23:56:50 ===
+Keeping conf for http://localhost:8000 intact
+
+=INFO REPORT==== 31-Jul-2011::00:12:50 ===
+Keeping conf for http://localhost:8000 intact
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Keeping conf for http://localhost:8000 intact
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+stop_ready([], <0.56.0>)
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Adding sconf for server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::01:21:51 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Terminate whole http://localhost:8005 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Terminate whole http://localhost:8004 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Terminate whole http://localhost:8003 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Terminate whole http://localhost:8002 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Terminate whole http://localhost:8001 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Keeping conf for http://localhost:8000 intact
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+stop_ready([], <0.86.0>)
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Adding sconf for server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::01:25:26 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:41:18 ===
+Wrap log "./localhost.access"
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+stop_ready([], <0.51.0>)
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Adding sconf for server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::01:47:30 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Terminate whole http://localhost:8005 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Terminate whole http://localhost:8004 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Terminate whole http://localhost:8003 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Terminate whole http://localhost:8002 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Terminate whole http://localhost:8001 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Keeping conf for http://localhost:8000 intact
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+stop_ready([], <0.67.0>)
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Adding sconf for server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::01:48:04 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+stop_ready([], <0.101.0>)
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Adding sconf for server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::01:48:32 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+stop_ready([], <0.193.0>)
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Adding sconf for server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::02:13:35 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Terminate whole http://localhost:8005 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Terminate whole http://localhost:8004 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Terminate whole http://localhost:8003 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Terminate whole http://localhost:8002 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Terminate whole http://localhost:8001 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Keeping conf for http://localhost:8000 intact
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+stop_ready([], <0.222.0>)
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Adding sconf for server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::02:26:01 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+stop_ready([], <0.56.0>)
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Adding sconf for server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::02:26:35 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:31:58 ===
+Terminate whole http://localhost:8005 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:31:58 ===
+Terminate whole http://localhost:8004 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:31:58 ===
+Terminate whole http://localhost:8003 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:31:58 ===
+Terminate whole http://localhost:8002 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:31:58 ===
+Terminate whole http://localhost:8001 virt server group 
+
+=INFO REPORT==== 31-Jul-2011::02:31:58 ===
+Keeping conf for http://localhost:8000 intact
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Creating new virt server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Yaws: Listening to 127.0.0.1:8000 for <1> virtual servers:
+ - http://localhost:8000 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::02:54:15 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:22:51 ===
+stop_ready([], <0.76.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:22:51 ===
+stop_ready([], <0.74.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:22:51 ===
+stop_ready([], <0.72.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:22:51 ===
+stop_ready([], <0.70.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:22:51 ===
+stop_ready([], <0.68.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:22:51 ===
+stop_ready([], <0.111.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Creating new virt server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Yaws: Listening to 127.0.0.1:8000 for <1> virtual servers:
+ - http://localhost:8000 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::04:22:54 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:26:26 ===
+stop_ready([], <0.149.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:26:26 ===
+stop_ready([], <0.147.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:26:26 ===
+stop_ready([], <0.145.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:26:26 ===
+stop_ready([], <0.143.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:26:26 ===
+stop_ready([], <0.141.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:26:26 ===
+stop_ready([], <0.151.0>)
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Creating new virt server http://localhost:8000
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Yaws: Listening to 127.0.0.1:8000 for <1> virtual servers:
+ - http://localhost:8000 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 31-Jul-2011::04:26:33 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 31-Jul-2011::04:36:33 ===
+Wrap log "./localhost.access"
+=INFO REPORT==== 31-Jul-2011::04:46:33 ===
+Wrap log "./localhost.access"
+=INFO REPORT==== 31-Jul-2011::04:56:33 ===
+Wrap log "./localhost.access"
+=INFO REPORT==== 1-Aug-2011::15:52:06 ===
+stop_ready([], <0.192.0>)
+
+=INFO REPORT==== 1-Aug-2011::15:52:06 ===
+stop_ready([], <0.190.0>)
+
+=INFO REPORT==== 1-Aug-2011::15:52:06 ===
+stop_ready([], <0.188.0>)
+
+=INFO REPORT==== 1-Aug-2011::15:52:06 ===
+stop_ready([], <0.186.0>)
+
+=INFO REPORT==== 1-Aug-2011::15:52:06 ===
+stop_ready([], <0.184.0>)
+
+=INFO REPORT==== 1-Aug-2011::15:52:06 ===
+stop_ready([], <0.756.0>)
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Creating new virt server http://localhost:8000
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Yaws: Listening to 127.0.0.1:8000 for <1> virtual servers:
+ - http://localhost:8000 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Creating new virt server http://localhost:8001
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Yaws: Listening to 127.0.0.1:8001 for <1> virtual servers:
+ - http://localhost:8001 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Creating new virt server http://localhost:8002
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Yaws: Listening to 127.0.0.1:8002 for <1> virtual servers:
+ - http://localhost:8002 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Creating new virt server http://localhost:8003
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Yaws: Listening to 127.0.0.1:8003 for <1> virtual servers:
+ - http://localhost:8003 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Creating new virt server http://localhost:8004
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Yaws: Listening to 127.0.0.1:8004 for <1> virtual servers:
+ - http://localhost:8004 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Creating new virt server http://localhost:8005
+
+=INFO REPORT==== 1-Aug-2011::15:52:09 ===
+Yaws: Listening to 127.0.0.1:8005 for <1> virtual servers:
+ - http://localhost:8005 under /home/ole/Dropbox_old/erl/prisma_aggregator/stream_simulator/yaws_html

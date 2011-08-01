@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>PRISMA test-feed</title>
+  <subtitle>Generiert Testnachrichten</subtitle>
+  <link href="http://localhost:8000/index.yaws" />
+  <link rel="self" href="http://localhost:8000/index.yaws" />
+  <updated>2011-07-30T16:54:19+02:00</updated>
+  <author>
+    <name>Ole Rixmann</name>
+    </author>
+  <id>PRISMA-Testfeeed</id>
+
+<erl module=testfeed>
+  out(A = #arg{opaque = {start_time, StartTime}}) -> 
+   {Now, _} = statistics(wall_clock),
+   Params = yaws_api:parse_query(A),
+   RespTime = list_to_integer(proplists:get_value("resp_time", Params, "0")),
+   timer:sleep(RespTime),
+   MaxEntries = list_to_integer(proplists:get_value("max_entries", Params, "15")),
+   MessageInterval = list_to_integer(proplists:get_value("message_interval", Params, "60")),
+   MessageDataList = case MessageInterval of
+     0 -> 
+       StaticInterval = list_to_integer(proplists:get_value("static_message_interval", Params, "60000")),
+       [{Num, Num * StaticInterval} || Num <- lists:seq(MaxEntries, 1, -1)];
+     _ -> 
+       MessageTimestamps = lists:seq(StartTime, Now, MessageInterval * 1000),
+       MessageNumbers = lists:seq(1, length(MessageTimestamps)),
+       lists:sublist(lists:reverse(lists:zip(MessageNumbers, MessageTimestamps)), 1, MaxEntries)
+   end,
+   F=fun({Number, Timestamp}) ->
+       generate_entry(Number, Timestamp)
+     end,
+   {ehtml, lists:map(F, MessageDataList)}.
+  
+  generate_entry(Number, Timestamp) ->
+  {entry, [],
+    [{title, [], "Eintrag Nr " ++ integer_to_list(Number)},
+     {link, [{href, "http://localhost:8000/index.yaws"}]},
+     {id, [], "Beitrag Nr. " ++ integer_to_list(Number)},
+     {published, [], integer_to_list(Timestamp)},
+     {updated, [], "2011-07-30T16:54:19+02:00"},
+     {content, [], "Lorem ipsum dolor sit amet, consectetur, adipisci velit …"}]}.
+</erl>
+
+</feed>
+
