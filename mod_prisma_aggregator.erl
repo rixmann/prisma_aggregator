@@ -14,7 +14,7 @@
 %% gen_mod implementation
 start(Host, Opts) ->
     ?INFO_MSG("mod_prisma_aggregator starting!, options:~n~p", [Opts]),
-    ets:new(?SPT, [named_table, protected, set, {keypos, 1}]),
+    ets:new(?SPT, [named_table, public, set, {keypos, 1}]),
     ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
     ets:insert(?CFG,{host, Host}),
     [_Accessor, _Coordinator, _DebugLvl, _Polltime] = %read config and store values in ?CFG ets, local config may be found in gen_server's Status
