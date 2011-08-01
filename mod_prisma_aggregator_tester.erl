@@ -7,7 +7,10 @@
 -include("jlib.hrl").
 -define(TCFG, aggregator_tester_config).
 
--export([map_to_n_lines/3]).
+-export([map_to_n_lines/3,
+	 create_json_subscription/4,
+	 send_iq/4,
+	 get_sender/0]).
 -export([start/2, stop/1, route/3]).
 
 %% gen_mod implementation
