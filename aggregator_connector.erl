@@ -279,7 +279,7 @@ handle_info(_Info, State) ->
 
 
 terminate(_Reason, State) ->
-    true = delete:delete({?SPT, get_id(State)}), 
+    true = ets:delete(?SPT, get_id(State)), 
     prisma_statistics_server:subscription_remove(),
     ?INFO_MSG("Worker stopping, id: ~p~n", [get_id(State)]),
     ok.
