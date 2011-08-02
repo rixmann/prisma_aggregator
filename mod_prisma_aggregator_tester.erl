@@ -81,8 +81,8 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		    send_subscriptions_file(list_to_integer(Count), Accessor, Batchname),
 		    ok;
 		"subs_from_file_bulk " ++ Params ->
-		    {match, [Count, Accessor, Batchname]} = re:run(Params, "(?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Count', 'Accessor', 'Batchname'], list}]),
-		    send_subscriptions_bulk_file(list_to_integer(Count), Accessor, Batchname),
+		    {match, [Start, Count, Accessor, Batchname]} = re:run(Params, "(?<Start>.+) (?<Count>.+) (?<Accessor>.+) (?<Batchname>.+)", [{capture, ['Start', 'Count', 'Accessor', 'Batchname'], list}]),
+		    send_subscriptions_bulk_file(list_to_integer(Start), list_to_integer(Count), Accessor, Batchname),
 		    ok;
 		"unsubscribe_bulk " ++ Params ->
 		    {match, [Name, Start, Stop]} = re:run(Params, "(?<Name>.+) (?<Start>.+) (?<Stop>.+)",
@@ -223,7 +223,7 @@ send_subscriptions_file(Count, Accessor, Batchname) ->
 	end,
     spawn(?MODULE, map_to_n_lines, [Device, Count, F]).
 
-send_subscriptions_bulk_file(Count, Accessor, Batchname) ->
+send_subscriptions_bulk_file(Start, Count, Accessor, Batchname) ->
     {ok, Device} = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
     F = fun(Line, N) ->
 		URI = lists:sublist(Line, 1, length(Line) -1),
@@ -233,23 +233,32 @@ send_subscriptions_bulk_file(Count, Accessor, Batchname) ->
 		       end,
 		create_json_subscription(URI, Accessor, Feed, Batchname ++ "-" ++ integer_to_list(N))
 	end,
-    SubList = map_to_n_lines(Device, Count, F),
+    SubList = map_to_n_lines(Device, Start, Count, F),
     send_iq(get_sender(), 
 	    get_aggregator(),
 	    "subscribeBulk",
 	    json_eep:term_to_json(SubList)).
 
-map_to_n_lines(Device, N, F) ->
-    map_to_n_lines(Device, 1, N, F, []).
+map_to_n_lines(Device,N, F) ->
+    map_to_n_lines(Device, 1 , 1, N, F, []).
 
-map_to_n_lines(Device, N, N, _F, Acc) ->
+map_to_n_lines(Device,Start, N, F) ->
+    map_to_n_lines(Device, Start, 1, N, F, []).
+
+map_to_n_lines(Device, _Start, N, N, _F, Acc) ->
     file:close(Device),
     Acc;
-map_to_n_lines(Device, Count, N, F, Acc) ->
+map_to_n_lines(Device, Start, Count, N, F, Acc) ->
     case io:get_line(Device, "") of
         eof  -> file:close(Device), 
 		Acc;
-        Line -> map_to_n_lines(Device, Count + 1, N, F, [F(Line, Count)| Acc])
+        Line -> 
+	    if 
+		N >= Start ->
+		    map_to_n_lines(Device, Start, Count + 1, N, F, [F(Line, Count)| Acc]);
+		true ->
+		    map_to_n_lines(Device, Start, Count + 1, N, F, Acc)
+	    end
     end.
 
 get_aggregator() ->
