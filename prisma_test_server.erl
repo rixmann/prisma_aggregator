@@ -43,9 +43,7 @@ error_received(Error) ->
     gen_server:call(?MODULE, {error_received, Error}).
 
 start_test(Aggregator, Test) ->
-    case Test of
-	"1" -> gen_server:call(?MODULE, {run_test, {hohes_aufkommen, {Aggregator, 0}}})
-    end.
+    gen_server:call(?MODULE, {run_test, {Test, {Aggregator, 0}}}).
 
 stop_test() ->
     gen_server:call(?MODULE, stop).
@@ -73,21 +71,18 @@ init([]) ->
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 handle_call({run_test, {Test, {Aggregator, Count}}}, _From, State) ->
-    case Test of 
-	hohes_aufkommen -> 
-	    Subs = [mod_prisma_aggregator_tester:create_json_subscription("http://127.0.0.1:8000/index.yaws", 
-					     jlib:jid_to_string(mod_prisma_aggregator_tester:get_sender()), 
-					     "ATOM", 
-					     "test_hohes_1-" ++ integer_to_list(I)) 
-		    || I <- lists:seq(Count, Count + 1000)],
-	    mod_prisma_aggregator_tester:send_iq(mod_prisma_aggregator_tester:get_sender(), 
-						 jlib:string_to_jid(Aggregator),
-						 "subscribeBulk",
-						 json_eep:term_to_json(Subs)),
-	    Timer = timer:apply_after(120000, gen_server, call, [?MODULE, {run_test, {hohes_aufkommen, {Aggregator, Count + 1000}}}]),
-	    ?INFO_MSG("Test: Hohes Aufkommen, neue Nachrichten werden verschickt ~p~nTimer: ~p", [Count + 1000, Timer]),
-	    {reply, ok, State}
-    end;
+    Subs = [mod_prisma_aggregator_tester:create_json_subscription("http://127.0.0.1:8000/index.yaws" ++ Test, 
+								  jlib:jid_to_string(mod_prisma_aggregator_tester:get_sender()), 
+								  "ATOM", 
+								  "test_hohes_1-" ++ integer_to_list(I)) 
+	    || I <- lists:seq(Count, Count + 1000)],
+    mod_prisma_aggregator_tester:send_iq(mod_prisma_aggregator_tester:get_sender(), 
+					 jlib:string_to_jid(Aggregator),
+					 "subscribeBulk",
+					 json_eep:term_to_json(Subs)),
+    _Timer = timer:apply_after(120000, gen_server, call, [?MODULE, {run_test, {Test, {Aggregator, Count + 1000}}}]),
+    ?INFO_MSG("Test: ~p Neue Nachrichten werden verschickt ~p", [Test, Count + 1000]),
+    {reply, ok, State};
 
 handle_call({message_received, _Message}, _From, State) ->
     {reply, ok, State#state{message_count = State#state.message_count + 1}};
