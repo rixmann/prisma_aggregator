@@ -254,7 +254,7 @@ map_to_n_lines(Device, Start, Count, N, F, Acc) ->
 		Acc;
         Line -> 
 	    if 
-		N >= Start ->
+		Count >= Start ->
 		    map_to_n_lines(Device, Start, Count + 1, N, F, [F(Line, Count)| Acc]);
 		true ->
 		    map_to_n_lines(Device, Start, Count + 1, N, F, Acc)
