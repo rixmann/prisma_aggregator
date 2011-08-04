@@ -114,7 +114,8 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 			send_iq(get_sender(),
 				From,
 				"unsubscribe",
-				json_eep:term_to_json(binary_to_list(SubId)))
+				json_eep:term_to_json(binary_to_list(SubId))),
+ 			prisma_test_server:error_received(JSON)
 		    catch
 			_ : _ -> fail %wegen binary to list
 		    end;
@@ -136,10 +137,9 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		  {<<"sender">>,null},
 		  {<<"subscriptionID">>,_SubId},
 		  {<<"title">>,null}]} -> 
-		    ok;
+		    prisma_test_server:message_received(JSON);
 		_ -> 
 		    ok
-		
 	    end
     end,
     ok;

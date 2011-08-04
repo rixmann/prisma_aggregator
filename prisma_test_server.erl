@@ -24,7 +24,11 @@
 	 start_test/2,
 	 stop_test/0]).
 
--record(state, {test, error_count, message_count}).
+-record(state, {test, 
+		error_count, 
+		message_count,
+		device,
+		walltime_init}).
 
 %%====================================================================
 %% API
@@ -47,6 +51,8 @@ start_test(Aggregator, Test) ->
 
 stop_test() ->
     gen_server:call(?MODULE, stop).
+
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -58,8 +64,17 @@ stop_test() ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
+
+
 init([]) ->
-    {ok, #state{error_count = 0, message_count = 0}}.
+    ok = file:delete("/var/log/ejabberd/teststats.dat"),
+    {ok, Device} = file:open("/var/log/ejabberd/teststats.dat", write),
+    {Walltime1970, _} = statistics(wall_clock),
+    agr:callbacktimer(1, collect_stats),
+    {ok, #state{error_count = 0, 
+		message_count = 0,
+		walltime_init = Walltime1970,
+		device = Device}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -101,6 +116,19 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast(collect_stats, State = #state{device = Dev,
+					  walltime_init = Walltime_init,
+					  message_count = MCount,
+					  error_count = ECount}) ->
+    {Walltime1970, _} = statistics(wall_clock),
+    io:format(Dev,                                    %add a line to teststats.dat
+	      "~-15w ~-15w ~-15w~n",
+	      [trunc((Walltime1970 - Walltime_init) div 100),
+	       MCount,
+	       ECount]),
+    agr:callbacktimer(1000, collect_stats),
+    {noreply, State};
+					  
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
