@@ -70,7 +70,7 @@ init([]) ->
     ok = file:delete("/var/log/ejabberd/teststats.dat"),
     {ok, Device} = file:open("/var/log/ejabberd/teststats.dat", write),
     {Walltime1970, _} = statistics(wall_clock),
-    agr:callbacktimer(1, collect_stats),
+    agr:callbacktimer(10, collect_stats),
     {ok, #state{error_count = 0, 
 		message_count = 0,
 		walltime_init = Walltime1970,

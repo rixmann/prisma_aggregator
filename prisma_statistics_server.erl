@@ -69,7 +69,7 @@ subscription_remove() ->
 init([]) ->
     ok = file:delete("/var/log/ejabberd/runtimestats.dat"),
     {ok, Device} = file:open("/var/log/ejabberd/runtimestats.dat", write),
-    agr:callbacktimer(1, collect_stats),
+    agr:callbacktimer(10, collect_stats),
     {RuntimeStart, _} = statistics(runtime),
     {Walltime1970, _} = statistics(wall_clock),
     {ok, #state{device = Device, 
