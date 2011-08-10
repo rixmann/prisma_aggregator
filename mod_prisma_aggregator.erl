@@ -170,8 +170,8 @@ echo(From, To, Body) ->
 send_message(From, To, TypeStr, BodyStr) ->
     XmlBody = {xmlelement, "message",
 	       [{"type", TypeStr},
-		{"from", From},
-		{"to", To}],
+		{"from", jlib:string_to_jid(From)},
+		{"to", jlib:string_to_jid(To)}],
 	       [{xmlelement, "body", [],
 		 [{xmlcdata, BodyStr}]}]},
     ejabberd_router:route(From, To, XmlBody).
@@ -180,8 +180,8 @@ send_message(From, To, TypeStr, BodyStr) ->
 send_iq(From, To, TypeStr, BodyStr) ->
     XmlBody = {xmlelement, "iq",
 	       [{"type", TypeStr},
-		{"from", From},
-		{"to", To}],
+		{"from", jlib:string_to_jid(From)},
+		{"to", jlib:string_to_jid(To)}],
 	       [{xmlelement, "query", [],
 		 [{xmlcdata, BodyStr}]}]},
     ejabberd_router:route(From, To, XmlBody).
