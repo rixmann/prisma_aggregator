@@ -6,7 +6,9 @@
 	 format_date/0, get_timestamp/0,
 	 get_polltime/0,
 	 callbacktimer_callback_fn/2,
-	 get_coordinator/0]).
+	 get_coordinator/0,
+	 config_put/2,
+	 config_read/1]).
 
 get_host() ->
     [{host, Ret}] = ets:lookup(?CFG, host),
@@ -21,7 +23,7 @@ get_polltime() ->
     Pt.
 
 callbacktimer(random, Callback, Offset) ->
-    RandomCallbackTime = ?RAND:uniform([?POLLTIME]),
+    RandomCallbackTime = ?RAND:uniform([config_read(polling_interval)]),
     callbacktimer(RandomCallbackTime + Offset, Callback).
 
 callbacktimer(random, Callback) ->
@@ -41,3 +43,9 @@ format_date() ->
 get_timestamp() ->
         {Mega,Sec,Micro} = erlang:now(),
         (Mega*1000000+Sec)*1000000+Micro.
+
+config_put(K, V) ->
+    mochiglobal:put(K,V).
+
+config_read(K) ->
+    mochiglobal:get(K, none).

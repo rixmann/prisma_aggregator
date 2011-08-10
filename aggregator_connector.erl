@@ -40,8 +40,8 @@ new_subscription(Sub = #subscription{}) ->
     Id = get_id(Sub),
     F = fun() -> mnesia:read(?PST, Id) end,
     case mnesia:transaction(F) of
-	{atomic, [Entry]} -> %reply("The Stream " ++ Id ++ " is already being polled.", Sub),
-			     Entry;
+	{atomic, [Entry]} -> %stream is already polled
+	    Entry;
 	_ -> supervisor:start_child(?SUP, [Sub])
     end.
 
@@ -123,7 +123,7 @@ init([SubOrId]) ->
 		 end
 	end, 
     {atomic, Subscription} = mnesia:transaction(F),
-    agr:callbacktimer(random, go_get_messages, 5000),
+    agr:callbacktimer(random, go_get_messages, 1),
     Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
     ibrowse:set_max_pipeline_size(Host, Port, 1),
@@ -141,10 +141,10 @@ handle_call(_Request, _From, State) ->
     {reply, Reply, State}.
 
 handle_cast({emigrate, To}, State = #state{subscription = Sub}) ->
-    Tsub = tuple_to_list(Sub#subscription{accessor = jlib:jid_to_string(Sub#subscription.accessor), host = ""}),
+    Tsub = tuple_to_list(Sub#subscription{host = ""}),
     %?INFO_MSG("subscription, die emigrieren soll: ~n~poriginal sub: ~n~p", [Tsub, Sub]),
     mod_prisma_aggregator:send_iq(Sub#subscription.host,
-				  jlib:string_to_jid(To),
+				  To,
 				  "immigrate",
 				  json_eep:term_to_json(Tsub)),
     {stop, normal, State};
@@ -161,57 +161,62 @@ handle_cast({rebind, To}, State = #state{subscription=Sub}) ->
     {noreply, State#state{subscription=Nsub}};
 
 handle_cast(go_get_messages, State = #state{subscription = Sub}) ->
+    CallbackOnConfig = fun(St) ->
+			       case agr:config_read(polling_retry_time_after_failure) of 
+				   never -> {stop, normal, St};
+				   Val -> agr:callbacktimer(random, Val, go_get_messages),
+					  {noreply, St}
+			       end
+		       end,
     case 
 	try 
-	    ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], ?POLL_TIMEOUT) 
+	    ibrowse:send_req(Sub#subscription.url, [], get, [], [{stream_to, self()}], agr:config_read(polling_timeout)) 
 	catch 
 	    _ : _ -> fail
 	end 
     of
 	{ibrowse_req_id, RequestId} ->
 	    prisma_statistics_server:signal_httpc_ok(),
-	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}});
+	    true = ets:insert(get_callbacks(State), {RequestId, {initial_get_stream, []}}),
+	    {noreply, State};
 	{error, retry_later} -> 
 	    prisma_statistics_server:signal_httpc_overload(),
-						%message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
-						%					      -2,
-						%					      <<"To many Http-Requests, system overloaded">>),
-						%			  Sub),
-	    agr:callbacktimer(100, go_get_messages);
+	    agr:callbacktimer(100, go_get_messages),
+	    {noreply, State};
 	{error, req_timedout} -> 
 	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						       -2,
 						       <<"Network error, timeout">>),
 				   Sub),
-	    agr:callbacktimer(get_polltime(State), go_get_messages);
+	    CallbackOnConfig(State);
 	{error, {conn_failed, {error, timeout}}} -> 
 	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						       -2,
 						       <<"Network error, connection failed -> timeout">>),
 				   Sub),
-	    agr:callbacktimer(get_polltime(State), go_get_messages);
+	    CallbackOnConfig(State);
 	{error, {conn_failed, {error, _}}} -> 
 	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						       -2,
 						       <<"Network error, connection failed">>),
 				   Sub),
-	    agr:callbacktimer(random, go_get_messages, 10 * get_polltime(State));
+	    CallbackOnConfig(State);
 	{error, _Reason} ->
 	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						       -2,
 						       <<"Network error, undefinded">>),
 				   Sub),
 						%	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
-	    agr:callbacktimer(random, go_get_messages);
+	    CallbackOnConfig(State);
 	{'EXIT', _} -> agr:callbacktimer(5, go_get_messages);
-	Val -> log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
-	       message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
-							  -2,
-							  <<"Network error, undefinded">>),
-				      Sub),
-	       agr:callbacktimer(5, go_get_messages)
-    end,
-    {noreply, State};
+	Val -> 
+	    log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
+	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
+						       -2,
+						       <<"Network error, undefinded">>),
+				   Sub),
+	    CallbackOnConfig(State)
+    end;
 
 handle_cast(stop, State) ->
     {stop, normal, State};
@@ -244,14 +249,14 @@ handle_info({ibrowse_async_response_end, ReqId} , State) ->
 	    handle_http_response(Hook, Content, State);
 	[] -> 
 	    log("~p didn't find req-id in callbacks for http-end", [get_id(State)]),
-	    agr:callbacktimer(get_polltime(State), go_get_messages),
+	    agr:callbacktimer(agr:config_read(polling_interval), go_get_messages),
 	    {noreply, State}
     end;
 
 handle_info({'EXIT', _Reason, normal}, State) -> %timer process died
     {noreply, State};
 
-handle_info({_Ref, {error, _}} = _F, State) ->
+handle_info({Ref, {error, _}} = _F, State) ->
 						%Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
 						%log("handle info on ~p, error:~n~p anzahl callbacks:~n~p", [get_id(State), F, Content]),
     
@@ -260,8 +265,12 @@ handle_info({_Ref, {error, _}} = _F, State) ->
 					      -2,
 					      <<"Network error, undefinded">>),
 			  State),
-    agr:callbacktimer(random, go_get_messages, 10 * get_polltime(State)),
-    {noreply, State};
+    ets:delete(State#state.callbacks, Ref),
+    case agr:config_read(polling_retry_time_after_failure) of 
+	never -> {stop, normal, State};
+	Val -> agr:callbacktimer(random, Val, go_get_messages),
+	       {noreply, State}
+    end;
 
 handle_info(_Info, State) ->
     %Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
@@ -370,8 +379,11 @@ handle_http_response(initial_get_stream, Body, State) ->
 							    -1,
 							    <<"Stream returned invalid XML">>),
 					Sub),
-		  agr:callbacktimer(get_polltime(State), go_get_messages),
-		  {noreply, State};
+		  case agr:config_read(polling_retry_time_after_failure) of 
+		      never -> {stop, normal, State};
+		      _Val -> agr:callbacktimer(agr:config_read(polling_interval), go_get_messages),
+			     {noreply, State}
+		  end;
 	      Xml ->
 		  try
 		      Content = case Sub#subscription.source_type of
@@ -401,7 +413,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 				 true -> 
 				     Sub
 			     end,
-		      agr:callbacktimer(get_polltime(State), go_get_messages),
+		      agr:callbacktimer(agr:config_read(polling_interval), go_get_messages),
 		      {noreply, State#state{subscription = NSub}}
 		  catch
 		      _Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
@@ -409,7 +421,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 								     -1,
 								     <<"Error while trying to interpret XML">>),
 						 Sub),
-			  agr:callbacktimer(get_polltime(State), go_get_messages),
+			  agr:callbacktimer(agr:config_read(polling_interval), go_get_messages),
 			  {noreply, State}
 		  end
 	  end,
@@ -420,14 +432,18 @@ handle_http_response({couch_doc_store_reply, _Doclist}, _Body, State) ->
     %log("Worker ~p stored to couchdb, resp-body: ~n~p", [get_id(State), _Body]),
     {noreply, State};
 
-handle_http_response(_, {error, _Reason}, State) ->
+handle_http_response(Ref, {error, _Reason}, State) ->
     log("Worker ~p received an polling error: ~n~p", [get_id(State), _Reason]),
     message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 					      -2,
 					      list_to_binary(_Reason)),
 			  State),
-    agr:callbacktimer(get_polltime(State), go_get_messages),
-    {noreply,State}.
+    ets:delete(State#state.callbacks, Ref),
+    case agr:config_read(polling_retry_time_after_failure) of 
+	never -> {stop, normal, State};
+	Val -> agr:callbacktimer(random, Val, go_get_messages),
+	       {noreply, State}
+    end.
 
 extract_new_messages(Messages, #subscription{last_msg_key = KnownKeys}) ->
     F = fun(El) ->  fun(Key) -> 
@@ -467,7 +483,7 @@ message_to_coordinator(Msg, #state{subscription = Sub}) ->
 
 message_to_coordinator(Msg, Sub) ->
     catch mod_prisma_aggregator:send_message(Sub#subscription.host,
-					     jlib:string_to_jid(get_coordinator()),
+					     agr:config_read(coordinator),
 					     "PrismaMessage", %TODO
 					     json_eep:term_to_json(Msg)).
 log(Msg, Vars) ->
@@ -533,15 +549,8 @@ create_prisma_error(SubId, Type, Desc) ->
       {<<"errorType">>, Type},
       {<<"errorDescription">>, Desc}]}.
 
-get_coordinator() ->
-    %"aggregatortester." ++ agr:get_host().
-    agr:get_coordinator().
-
-get_polltime(#state{subscription = Sub}) ->
-    Polltime = Sub#subscription.polltime,
-    Polltime.
-
 delete_subscription(Id) ->
     F = fun() -> mnesia:delete({?PST, Id})
 	end, 
     {atomic, ok} = mnesia:transaction(F).
+    

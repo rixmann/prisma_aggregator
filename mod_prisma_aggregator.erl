@@ -15,15 +15,21 @@
 start(Host, Opts) ->
     ?INFO_MSG("mod_prisma_aggregator starting!, options:~n~p", [Opts]),
     ets:new(?SPT, [named_table, public, set, {keypos, 1}]),
-    ets:new(?CFG, [named_table, protected, set, {keypos, 1}]),
-    ets:insert(?CFG,{host, Host}),
-    [_Accessor, _Coordinator, _DebugLvl, _Polltime] = %read config and store values in ?CFG ets, local config may be found in gen_server's Status
-	lists:map(fun(El) -> 
-			  Ret = proplists:get_value(El, Opts),
-			  ets:insert(?CFG, {El, Ret}),
-			  Ret
-		  end, 
-		  [accessor, coordinator, debugLvl, polltime]),
+    agr:config_put(host, Host),
+    ReadAndStoreConf = fun(Key, Default) ->
+			       case proplists:get_value(Key, Opts, none) of
+				   none -> agr:config_put(Key, Default);
+				   Val -> agr:config_put(Key, Val)
+			       end
+		       end,
+    ReadAndStoreConf(accessor, none),
+    ReadAndStoreConf(coordinator, none),
+    ReadAndStoreConf(overload_treshhold_runque, 500),
+    ReadAndStoreConf(overload_treshhold_window, 20000),
+    ReadAndStoreConf(polling_interval, 60000),
+    ReadAndStoreConf(polling_timeout, 30000),
+    ReadAndStoreConf(polling_retry_time_after_failure, never),
+    ReadAndStoreConf(collect_stats, true),
     ibrowse:start(),
     setup_mnesia(),
     RandomGeneratorSpec = {?RAND,
@@ -50,13 +56,18 @@ start(Host, Opts) ->
     F = fun() -> mnesia:all_keys(?PST) end,
     {atomic, Entries} = mnesia:transaction(F),
     log("read PST~n~p", [Entries]),
-    lists:map(fun(El) ->
-		      aggregator_connector:start_worker(El)
-	      end, Entries),
+    spawn(fun() -> lists:map(fun(El) ->
+				     aggregator_connector:start_worker(El),
+				     case proplists:get_value(slow_startup, Opts) of
+					 true -> timer:sleep(10);
+					 _ -> ok
+				     end
+			     end, 
+			     Entries)
+	  end),
     MyHost = gen_mod:get_opt_host(Host, Opts, "aggregator.@HOST@"),
     ejabberd_router:register_route(MyHost, {apply, ?MODULE, route}),
-    
-   ok.
+    ok.
 
 stop(_Host) ->
     supervisor:terminate_child(ejabberd_sup, ?SUP),
@@ -158,19 +169,19 @@ echo(From, To, Body) ->
 
 send_message(From, To, TypeStr, BodyStr) ->
     XmlBody = {xmlelement, "message",
-           [{"type", TypeStr},
-        {"from", jlib:jid_to_string(From)},
-        {"to", jlib:jid_to_string(To)}],
-           [{xmlelement, "body", [],
-         [{xmlcdata, BodyStr}]}]},
+	       [{"type", TypeStr},
+		{"from", From},
+		{"to", To}],
+	       [{xmlelement, "body", [],
+		 [{xmlcdata, BodyStr}]}]},
     ejabberd_router:route(From, To, XmlBody).
 
 
 send_iq(From, To, TypeStr, BodyStr) ->
     XmlBody = {xmlelement, "iq",
 	       [{"type", TypeStr},
-		{"from", jlib:jid_to_string(From)},
-		{"to", jlib:jid_to_string(To)}],
+		{"from", From},
+		{"to", To}],
 	       [{xmlelement, "query", [],
 		 [{xmlcdata, BodyStr}]}]},
     ejabberd_router:route(From, To, XmlBody).
@@ -223,8 +234,8 @@ handle_json_msg(Sub, _From, "updateSubscription") ->
 	    ?CONNECTOR:update_subscription(#subscription{id = binary_to_list(GV(subId)), 
 						      url = GV(url), 
 						      source_type = binary_to_list(GV(sourceType)), 
-						      accessor = jlib:string_to_jid(binary_to_list(GV(accessor))),
-						      host = jlib:string_to_jid("aggregator." ++ agr:get_host())}),	    
+						      accessor = binary_to_list(GV(accessor)),
+						      host = "aggregator." ++ agr:config_read(host)}),	    
 	    ok
     end;
 
@@ -237,9 +248,9 @@ handle_json_msg(Sub, _From, "subscribe") ->
 	    ?CONNECTOR:new_subscription(#subscription{id = binary_to_list(GV(subId)), 
 						      url = GV(url), 
 						      source_type = binary_to_list(GV(sourceType)), 
-						      accessor = jlib:string_to_jid(binary_to_list(GV(accessor))),
+						      accessor = binary_to_list(GV(accessor)),
 						      polltime = agr:get_polltime(),
-						      host = jlib:string_to_jid("aggregator." ++ agr:get_host())}),	    
+						      host = "aggregator." ++ agr:config_read(host)}),	    
 	    ok
     end.
 

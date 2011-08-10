@@ -96,8 +96,8 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		    {match, [Source, Destination, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
 		    send_emigrate(Source, Destination, Id);
 		"test " ++ Params ->
-		    {match, [Aggregator, TestNumber]} = re:run(Params, "(?<Ag>.+) (?<Tn>.+)", [{capture, ['Ag', 'Tn'], list}]),
-		    prisma_test_server:start_test(Aggregator, TestNumber)
+		    {match, [Aggregator, URL]} = re:run(Params, "(?<Ag>.+) (?<Tn>.+)", [{capture, ['Ag', 'Tn'], list}]),
+		    prisma_test_server:start_test(Aggregator, URL)
 	    end;
 	"PrismaMessage" ->
 	    JSON = try
