@@ -247,7 +247,7 @@ handle_json_msg(Sub, _From, "subscribe") ->
 						      url = GV(url), 
 						      source_type = binary_to_list(GV(sourceType)), 
 						      accessor = binary_to_list(GV(accessor)),
-						      polltime = agr:get_polltime(),
+						      polltime = agr:config_read(polling_interval),
 						      host = "aggregator." ++ agr:config_read(host)}),	    
 	    ok
     end.
