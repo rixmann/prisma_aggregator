@@ -164,7 +164,7 @@ handle_cast(go_get_messages, State = #state{subscription = Sub}) ->
     CallbackOnConfig = fun(St) ->
 			       case agr:config_read(polling_retry_time_after_failure) of 
 				   never -> {stop, normal, St};
-				   Val -> agr:callbacktimer(random, Val, go_get_messages),
+				   Val -> agr:callbacktimer(random, go_get_messages, Val),
 					  {noreply, St}
 			       end
 		       end,
@@ -268,7 +268,7 @@ handle_info({Ref, {error, _}} = _F, State) ->
     ets:delete(State#state.callbacks, Ref),
     case agr:config_read(polling_retry_time_after_failure) of 
 	never -> {stop, normal, State};
-	Val -> agr:callbacktimer(random, Val, go_get_messages),
+	Val -> agr:callbacktimer(random, go_get_messages, Val),
 	       {noreply, State}
     end;
 
@@ -441,7 +441,7 @@ handle_http_response(Ref, {error, _Reason}, State) ->
     ets:delete(State#state.callbacks, Ref),
     case agr:config_read(polling_retry_time_after_failure) of 
 	never -> {stop, normal, State};
-	Val -> agr:callbacktimer(random, Val, go_get_messages),
+	Val -> agr:callbacktimer(random, go_get_messages, Val),
 	       {noreply, State}
     end.
 
