@@ -170,7 +170,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 	       catch
 		   _:_ -> -1
 	       end,
-	      Walltime1970 - NewTreshholdTime]),
+	      (Walltime1970 - NewTreshholdTime) div 100]),
     agr:callbacktimer(1000, collect_stats),
     {noreply, State#state{proceeded_subs = 0,
 			  proceeded_subs_old = NPsubs,

@@ -210,8 +210,8 @@ handle_cast(go_get_messages, State = #state{subscription = Sub}) ->
 						%	    log("opening http connection failed on worker ~p for reason~n~p", [get_id(State), _Reason]),
 	    CallbackOnConfig(State);
 	{'EXIT', _} -> agr:callbacktimer(5, go_get_messages);
-	Val -> 
-	    log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
+	_Val -> 
+	    %log("opening http connection failed on worker ~p for Val~n~p", [get_id(State), Val]),
 	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
 						       -2,
 						       <<"Network error, undefinded">>),
