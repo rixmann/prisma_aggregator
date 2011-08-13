@@ -15,7 +15,7 @@ start() ->
     yaws:start_embedded(Yaws_dir, []),
     Sconf = [[{port, Port_num}, 
 	      {docroot, Yaws_dir},
-	      {listen, {127,0,0,1}},
+	      {listen, {0,0,0,0}},
 	      {opaque, {start_time, StartTime}}] || Port_num <- lists:seq(Start_port, Start_port + Instances)],
     {ok, SCList, GC, _ChildSpecs} =
 	yaws_api:embedded_start_conf(Yaws_dir, Sconf),
