@@ -224,7 +224,7 @@ subscription_from_line(Line, Accessor, Name) ->
 	       {match, ["atom", _]} -> "ATOM";
 	       _ -> "RSS"
 	   end,
-    json_eep:term_to_json(create_json_subscription(URI, Accessor, Feed, Name)).
+    create_json_subscription(URI, Accessor, Feed, Name).
 
 send_subscriptions_bulk_file(Start, Count, Accessor, Batchname) ->
     {ok, Device} = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
