@@ -225,9 +225,9 @@ map_to_n_lines(Device,N, F) ->
 %map_to_n_lines(Device,Start, N, F) ->
 %    map_to_n_lines(Device, Start, 1, N, F, []).
 
-map_to_n_lines(Device, _Start, N, N, _F, Acc) ->
-    file:close(Device),
+map_to_n_lines(_Device, _Start, N, N, _F, Acc) ->
     Acc;
+
 map_to_n_lines(Device, Start, Count, N, F, Acc) ->
     case io:get_line(Device, "") of
         eof  -> Acc;
