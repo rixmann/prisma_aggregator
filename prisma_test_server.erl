@@ -166,7 +166,7 @@ handle_cast({run_test, {overload, {{From, To}, StartTime, Count, Rate, Dev}}}, S
 		mod_prisma_aggregator_tester:subscription_from_line(Line, "aggregatortester." ++ agr:config_read(host), "overload_and_recover-" ++ integer_to_list(N + Count))
 	end,
     ?INFO_MSG("vor map", []),
-    Subs = map_to_n_lines(Dev, MissingMessages, F),
+    Subs = map_to_n_lines(Dev, Count, Count , ExpectedMessages, F, []),
     ?INFO_MSG("nach map", []),
     mod_prisma_aggregator:send_iq(jlib:string_to_jid(From), Subs),
     ?INFO_MSG("nach senden", []),
@@ -222,15 +222,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 timer(Time, Params)-> 
     timer:apply_after(Time, gen_server, call, [?MODULE, Params]).
-
-map_to_n_lines(Device,N, F) ->
-    map_to_n_lines(Device, 1 , 1, N, F, []).
-
-%map_to_n_lines(Device,Start, N, F) ->
-%    map_to_n_lines(Device, Start, 1, N, F, []).
-
-map_to_n_lines(_Device, _Start, N, N, _F, Acc) ->
-    Acc;
 
 map_to_n_lines(Device, Start, Count, N, F, Acc) ->
     case io:get_line(Device, "") of
