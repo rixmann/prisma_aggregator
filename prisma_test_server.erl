@@ -52,7 +52,7 @@ overload_received() ->
     gen_server:cast(?MODULE, overload).
 
 start_test(Aggregator, Test) ->
-    gen_server:call(?MODULE, {run_test, {Test, {Aggregator, 0}}}).
+    gen_server:cast(?MODULE, {run_test, {Test, {Aggregator, 0}}}).
 
 start_overload_and_recover(From, To, Rate) ->
     {Walltime, _} = statistics(wall_clock),
