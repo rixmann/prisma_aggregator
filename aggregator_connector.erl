@@ -109,7 +109,7 @@ immigrate(Sub, From) ->
 
 init([SubOrId]) ->
     Id = get_id_from_subscription_or_id(SubOrId),
-    log("Worker ~p starting", [Id]),
+%    log("Worker ~p starting", [Id]),
     process_flag(trap_exit, true),
     true = ets:insert(?SPT, {Id, self()}),
     F = fun() -> case mnesia:read(?PST, Id) of
