@@ -153,7 +153,7 @@ handle_cast({run_test, {overload,  {{From, To}, _StartTime, Count, _Rate, Dev}}}
     {noreply, State};
 
 handle_cast({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, State) ->
-    Dev = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
+    {ok, Dev} = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
     gen_server:cast(?MODULE, {run_test, {overload, {FromTo, StartTime, Count, Rate, Dev}}}),
     {noreply, State};
 
