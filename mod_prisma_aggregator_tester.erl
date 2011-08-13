@@ -102,7 +102,7 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		    prisma_test_server:start_test(Aggregator, URL);
 		"overload_and_recover " ++ Params ->
 		    {match, [Source, Destination, Rate]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Rate>.+)", [{capture, ['From', 'To', 'Rate'], list}]),
-		    prisma_test_server:start_overload_and_recover(Source, Destination, integer_to_list(Rate))
+		    prisma_test_server:start_overload_and_recover(Source, Destination, list_to_integer(Rate))
 	    end;
 	"PrismaMessage" ->
 	    JSON = try
@@ -133,8 +133,9 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		  {<<"sender">>,null},
 		  {<<"subscriptionID">>,_SubId},
 		  {<<"title">>,null}]} -> prisma_test_server:message_received(JSON);
-		
+
 		"overloaded" -> prisma_test_server:overload_received();
+
 		_ -> ok
 	    end;
 	_ -> ok
