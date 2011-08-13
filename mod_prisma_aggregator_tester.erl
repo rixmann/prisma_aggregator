@@ -12,7 +12,9 @@
 	 send_iq/4,
 	 get_sender/0,
 	 send_subscriptions_bulk_file/4,
-	 send_emigrate/3]).
+	 send_emigrate/3,
+	 send_bulk_subscriptions/2,
+	 subscription_from_line/3]).
 -export([start/2, stop/1, route/3]).
 
 %% gen_mod implementation
@@ -209,17 +211,20 @@ create_json_subscription(Url, Accessor, SourceType, Id) ->
 send_subscriptions_file(Count, Accessor, Batchname) ->
     {ok, Device} = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
     F = fun(Line, N) ->
-		URI = lists:sublist(Line, 1, length(Line) -1),
-		Feed = case re:run(URI, ".*((?<Atom>atom)|(?<Rss>rss)).*", [{capture, ['Atom', 'Rss'], list}]) of
-			   {match, ["atom", _]} -> "ATOM";
-			   _ -> "RSS"
-		       end,
 		send_iq(get_sender(), 
 			get_aggregator(),
 			"subscribe",
-			json_eep:term_to_json(create_json_subscription(URI, Accessor, Feed, Batchname ++ "-" ++ integer_to_list(N))))
+			subscription_from_line(Line, Accessor, Batchname ++ "-" ++ N))
 	end,
     spawn(?MODULE, map_to_n_lines, [Device, Count, F]).
+
+subscription_from_line(Line, Accessor, Name) ->
+    URI = lists:sublist(Line, 1, length(Line) -1),
+    Feed = case re:run(URI, ".*((?<Atom>atom)|(?<Rss>rss)).*", [{capture, ['Atom', 'Rss'], list}]) of
+	       {match, ["atom", _]} -> "ATOM";
+	       _ -> "RSS"
+	   end,
+    json_eep:term_to_json(create_json_subscription(URI, Accessor, Feed, Name)).
 
 send_subscriptions_bulk_file(Start, Count, Accessor, Batchname) ->
     {ok, Device} = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
@@ -236,6 +241,12 @@ send_subscriptions_bulk_file(Start, Count, Accessor, Batchname) ->
 	    get_aggregator(),
 	    "subscribeBulk",
 	    json_eep:term_to_json(SubList)).
+
+send_bulk_subscriptions(To, Subscriptions) ->
+    send_iq(get_sender(), 
+	    To,
+	    "subscribeBulk",
+	    json_eep:term_to_json(Subscriptions)).
 
 map_to_n_lines(Device,N, F) ->
     map_to_n_lines(Device, 1 , 1, N, F, []).

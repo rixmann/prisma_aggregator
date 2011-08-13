@@ -143,7 +143,8 @@ handle_cast(overload, State) ->
     ?INFO_MSG("In overload", []),
     {noreply, State#state{test= recover}};
 
-handle_cast({run_test, {overload,  {{From, To}, _StartTime, Count, _Rate}}}, #state{test=recover} = State) ->
+handle_cast({run_test, {overload,  {{From, To}, _StartTime, Count, _Rate, Dev}}}, #state{test=recover} = State) ->
+    file:close(Dev),
     ?INFO_MSG("In run recover", []),
     lists:map(fun(Num) ->
 		      mod_prisma_aggregator_tester:send_emigrate(From, To, "overload_and_recover-" ++ integer_to_list(Num))
@@ -152,12 +153,22 @@ handle_cast({run_test, {overload,  {{From, To}, _StartTime, Count, _Rate}}}, #st
     {noreply, State};
 
 handle_cast({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, State) ->
+    Dev = file:open("/usr/lib/ejabberd/testfeeds.txt", read),
+    gen_server:cast(?MODULE, {run_test, {overload, {FromTo, StartTime, Count, Rate, Dev}}}),
+    {noreply, State};
+
+handle_cast({run_test, {overload, {{From, To}, StartTime, Count, Rate, Dev}}}, State) ->
     ?INFO_MSG("In run overload", []),
     {Walltime, _} = statistics(wall_clock),
     ExpectedMessages = ((Walltime - StartTime) div 1000) * Rate,
     MissingMessages = ExpectedMessages - Count,
     mod_prisma_aggregator_tester:send_subscriptions_bulk_file(Count, MissingMessages, "aggregatortester." ++ agr:config_read(host), "overload_and_recover"),
-    agr:callbacktimer(100, {run_test, {overload, {FromTo, StartTime, Count + MissingMessages, Rate}}}),
+    F = fun(Line, N) ->
+		mod_prisma_aggregator_tester:subscription_from_line(Line, "aggregatortester." ++ agr:config_read(host), "overload_and_recover-" ++ integer_to_list(N + Count))
+	end,
+    Subs = map_to_n_lines(Dev, MissingMessages, F),
+    mod_prisma_aggregator:send_iq(jlib:string_to_jid(From), Subs),
+    agr:callbacktimer(100, {run_test, {overload, {{From, To}, StartTime, Count + MissingMessages, Rate, Dev}}}),
     {noreply, State#state{test=overload}};
 
 handle_cast(collect_stats, State = #state{device = Dev,
@@ -208,3 +219,24 @@ code_change(_OldVsn, State, _Extra) ->
 
 timer(Time, Params)-> 
     timer:apply_after(Time, gen_server, call, [?MODULE, Params]).
+
+map_to_n_lines(Device,N, F) ->
+    map_to_n_lines(Device, 1 , 1, N, F, []).
+
+%map_to_n_lines(Device,Start, N, F) ->
+%    map_to_n_lines(Device, Start, 1, N, F, []).
+
+map_to_n_lines(Device, _Start, N, N, _F, Acc) ->
+    file:close(Device),
+    Acc;
+map_to_n_lines(Device, Start, Count, N, F, Acc) ->
+    case io:get_line(Device, "") of
+        eof  -> Acc;
+        Line -> 
+	    if 
+		Count >= Start ->
+		    map_to_n_lines(Device, Start, Count + 1, N, F, [F(Line, Count)| Acc]);
+		true ->
+		    map_to_n_lines(Device, Start, Count + 1, N, F, Acc)
+	    end
+    end.
