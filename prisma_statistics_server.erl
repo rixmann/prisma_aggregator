@@ -137,7 +137,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
     RunqueTreshholdHit = (Runque > agr:config_read(overload_treshhold_runque)),
     {NewTreshholdTime, EMSentNew} = if RunqueTreshholdHit ->
 					    Window = agr:config_read(overload_treshhold_window),
-					    if ((Walltime - OldTreshholdTime)  > Window) ->
+					    if ((Walltime1970 - OldTreshholdTime)  > Window) ->
 						    if (not ErrorMessageSent) ->
 							    mod_prisma_aggregator:send_iq(agr:config_read(aggregator),
 											  agr:config_read(coordinator),
@@ -149,7 +149,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 						    end;
 					       true -> {OldTreshholdTime, false}
 					    end;
-				       true -> {Walltime, false}
+				       true -> {Walltime1970, false}
 				    end,
     
     
@@ -157,7 +157,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
     Psubs_sec = trunc(Psubs / (Walltime / 1000)),
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
-	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w ~15w~n",
+	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
 	      [trunc((Walltime1970 - Walltime_init) div 100),  %walltime in 10th of seconds
 	       Runque,                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
@@ -171,7 +171,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 	       catch
 		   _:_ -> -1
 	       end,
-	      NewTreshholdTime]),
+	      Walltime - NewTreshholdTime]),
     agr:callbacktimer(1000, collect_stats),
     {noreply, State#state{proceeded_subs = 0,
 			  proceeded_subs_old = NPsubs,
