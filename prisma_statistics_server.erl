@@ -157,7 +157,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
     Psubs_sec = trunc(Psubs / (Walltime / 1000)),
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
-	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
+	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w ~15w~n",
 	      [trunc((Walltime1970 - Walltime_init) div 100),  %walltime in 10th of seconds
 	       Runque,                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
@@ -170,7 +170,8 @@ handle_cast(collect_stats, State = #state{device = Dev,
 		   list_to_integer(string:substr(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz="), 2, length(os:cmd("ps -p " ++ os:getpid() ++ " -o vsz=")) -2)) div (1024 * 10)
 	       catch
 		   _:_ -> -1
-	       end]),
+	       end,
+	      RunqueTreshholdTime]),
     agr:callbacktimer(1000, collect_stats),
     {noreply, State#state{proceeded_subs = 0,
 			  proceeded_subs_old = NPsubs,
