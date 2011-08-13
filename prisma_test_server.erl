@@ -138,18 +138,15 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-handle_cast({recover, {{From, To}, _StartTime, Count, _Rate}}, State) ->
-    lists:map(fun(Num) ->
-		      mod_prisma_aggregator_tester:send_emigrate(From, To, "overload_and_recover-" ++ integer_to_list(Num))
-	      end,
-	     lists:seq(Count div 2, Count, 1)),
-    {noreply, State};
 
 handle_cast(overload, State) ->
     {noreply, State#state{test= recover}};
 
-handle_cast({run_test, {overload, Params}}, #state{test=recover} = State) ->
-    agr:callbacktimer(1,{run_test, {recover, Params}}),
+handle_cast({run_test, {overload,  {{From, To}, _StartTime, Count, _Rate}}}, #state{test=recover} = State) ->
+    lists:map(fun(Num) ->
+		      mod_prisma_aggregator_tester:send_emigrate(From, To, "overload_and_recover-" ++ integer_to_list(Num))
+	      end,
+	      lists:seq(Count div 2, Count, 1)),
     {noreply, State};
 
 handle_cast({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, State) ->
@@ -159,7 +156,7 @@ handle_cast({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, State) ->
     spawn(fun() ->
 		  mod_prisma_aggregator_tester:send_subscriptions_bulk_file(Count, MissingMessages, "aggregatortester." ++ agr:config_read(host), "overload_and_recover")
 	  end),
-    agr:callbacktimer(1, {run_test, {overload, {FromTo, StartTime, Count + MissingMessages, Rate}}}),
+    agr:callbacktimer(100, {run_test, {overload, {FromTo, StartTime, Count + MissingMessages, Rate}}}),
     {noreply, State#state{test=overload}};
 
 handle_cast(collect_stats, State = #state{device = Dev,
