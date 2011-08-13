@@ -223,6 +223,9 @@ code_change(_OldVsn, State, _Extra) ->
 timer(Time, Params)-> 
     timer:apply_after(Time, gen_server, call, [?MODULE, Params]).
 
+map_to_n_lines(_Device, _Start , N, N, _F, Acc) ->
+    Acc;
+
 map_to_n_lines(Device, Start, Count, N, F, Acc) ->
     case io:get_line(Device, "") of
         eof  -> Acc;
