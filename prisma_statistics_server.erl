@@ -138,7 +138,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 					    Window = agr:config_read(overload_treshhold_window),
 					    if ((Walltime1970 - OldTreshholdTime)  > Window) ->
 						    if (not ErrorMessageSent) ->
-							    mod_prisma_aggregator:send_iq(agr:config_read(aggregator),
+							    mod_prisma_aggregator:send_message(agr:config_read(aggregator),
 											  agr:config_read(coordinator),
 											  "PrismaMessage",
 											  json_eep:term_to_json("overloaded")),
