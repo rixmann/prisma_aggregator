@@ -108,7 +108,7 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 
 handle_cast({run_test, {Test, {Aggregator, Count}}}, State) ->
-    Subs = [mod_prisma_aggregator_tester:create_json_subscription("http://127.0.0.1:8000/index.yaws" ++ Test, 
+    Subs = [mod_prisma_aggregator_tester:create_json_subscription(Test, 
 								  jlib:jid_to_string(mod_prisma_aggregator_tester:get_sender()), 
 								  "ATOM", 
 								  "test_hohes_1-" ++ integer_to_list(I)) 
