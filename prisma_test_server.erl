@@ -49,14 +49,14 @@ error_received(Error, From) ->
     gen_server:call(?MODULE, {error_received, {Error, From}}).
 
 overload_received() ->
-    gen_server:call(?MODULE, overload).
+    gen_server:cast(?MODULE, overload).
 
 start_test(Aggregator, Test) ->
     gen_server:call(?MODULE, {run_test, {Test, {Aggregator, 0}}}).
 
 start_overload_and_recover(From, To, Rate) ->
     {Walltime, _} = statistics(wall_clock),
-    gen_server:call(?MODULE, {run_test, {overload, {{From, To}, Walltime, 0, Rate}}}).
+    gen_server:cast(?MODULE, {run_test, {overload, {{From, To}, Walltime, 0, Rate}}}).
 
 stop_test() ->
     gen_server:call(?MODULE, stop).
@@ -95,29 +95,6 @@ init([]) ->
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 
-handle_call({recover, {{From, To}, _StartTime, Count, _Rate}}, _From, State) ->
-    lists:map(fun(Num) ->
-		      mod_prisma_aggregator_tester:send_emigrate(From, To, "overload_and_recover-" ++ integer_to_list(Num))
-	      end,
-	     lists:seq(Count div 2, Count, 1)),
-    {reply, ok, State};
-
-handle_call(overload, _From, State) ->
-    {reply, ok, State#state{test= recover}};
-
-handle_call({run_test, {overload, Params}}, _From, #state{test=recover} = State) ->
-    timer(1,{run_test, {recover, Params}}),
-    {reply, ok, State};
-
-handle_call({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, _From, State) ->
-    {Walltime, _} = statistics(wall_clock),
-    ExpectedMessages = ((Walltime - StartTime) div 1000) * Rate,
-    MissingMessages = ExpectedMessages - Count,
-    spawn(fun() ->
-		  mod_prisma_aggregator_tester:send_subscriptions_bulk_file(Count, MissingMessages, "aggregatortester." ++ agr:config_read(host), "overload_and_recover")
-	  end),
-    _Timer = timer(1, {run_test, {overload, {FromTo, StartTime, Count + MissingMessages, Rate}}}),
-    {reply, ok, State#state{test=overload}};
 
 handle_call({run_test, {Test, {Aggregator, Count}}}, _From, State) ->
     Subs = [mod_prisma_aggregator_tester:create_json_subscription("http://127.0.0.1:8000/index.yaws" ++ Test, 
@@ -161,6 +138,30 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast({recover, {{From, To}, _StartTime, Count, _Rate}}, State) ->
+    lists:map(fun(Num) ->
+		      mod_prisma_aggregator_tester:send_emigrate(From, To, "overload_and_recover-" ++ integer_to_list(Num))
+	      end,
+	     lists:seq(Count div 2, Count, 1)),
+    {noreply, State};
+
+handle_cast(overload, State) ->
+    {noreply, State#state{test= recover}};
+
+handle_cast({run_test, {overload, Params}}, #state{test=recover} = State) ->
+    agr:callbacktimer(1,{run_test, {recover, Params}}),
+    {noreply, State};
+
+handle_cast({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, State) ->
+    {Walltime, _} = statistics(wall_clock),
+    ExpectedMessages = ((Walltime - StartTime) div 1000) * Rate,
+    MissingMessages = ExpectedMessages - Count,
+    spawn(fun() ->
+		  mod_prisma_aggregator_tester:send_subscriptions_bulk_file(Count, MissingMessages, "aggregatortester." ++ agr:config_read(host), "overload_and_recover")
+	  end),
+    agr:callbacktimer(1, {run_test, {overload, {FromTo, StartTime, Count + MissingMessages, Rate}}}),
+    {noreply, State#state{test=overload}};
+
 handle_cast(collect_stats, State = #state{device = Dev,
 					  walltime_init = Walltime_init,
 					  message_count = MCount,
