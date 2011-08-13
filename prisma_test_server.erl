@@ -156,7 +156,7 @@ handle_cast({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, State) ->
     spawn(fun() ->
 		  mod_prisma_aggregator_tester:send_subscriptions_bulk_file(Count, MissingMessages, "aggregatortester." ++ agr:config_read(host), "overload_and_recover")
 	  end),
-    agr:callbacktimer(100, {run_test, {overload, {FromTo, StartTime, Count + MissingMessages, Rate}}}),
+    %agr:callbacktimer(100, {run_test, {overload, {FromTo, StartTime, Count + MissingMessages, Rate}}}),
     {noreply, State#state{test=overload}};
 
 handle_cast(collect_stats, State = #state{device = Dev,
