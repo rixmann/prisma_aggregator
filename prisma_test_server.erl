@@ -165,9 +165,13 @@ handle_cast({run_test, {overload, {{From, To}, StartTime, Count, Rate, Dev}}}, S
     F = fun(Line, N) ->
 		mod_prisma_aggregator_tester:subscription_from_line(Line, "aggregatortester." ++ agr:config_read(host), "overload_and_recover-" ++ integer_to_list(N + Count))
 	end,
+    ?INFO_MSG("vor map", []),
     Subs = map_to_n_lines(Dev, MissingMessages, F),
+    ?INFO_MSG("nach map", []),
     mod_prisma_aggregator:send_iq(jlib:string_to_jid(From), Subs),
+    ?INFO_MSG("nach senden", []),
     agr:callbacktimer(100, {run_test, {overload, {{From, To}, StartTime, Count + MissingMessages, Rate, Dev}}}),
+    ?INFO_MSG("nach callback", []),
     {noreply, State#state{test=overload}};
 
 handle_cast(collect_stats, State = #state{device = Dev,
