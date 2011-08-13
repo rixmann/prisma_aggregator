@@ -16,6 +16,7 @@ start(Host, Opts) ->
     ?INFO_MSG("mod_prisma_aggregator starting!, options:~n~p", [Opts]),
     ets:new(?SPT, [named_table, public, set, {keypos, 1}]),
     agr:config_put(host, Host),
+    agr:config_put(aggregator, "aggregator." ++ Host),
     ReadAndStoreConf = fun(Key, Default) ->
 			       case proplists:get_value(Key, Opts, none) of
 				   none -> agr:config_put(Key, Default);
@@ -31,6 +32,8 @@ start(Host, Opts) ->
     ReadAndStoreConf(polling_retry_time_after_failure, never),
     ReadAndStoreConf(collect_stats, true),
     ibrowse:start(),
+    ibrowse:set_max_pipeline_size("localhost", "5984", 1),
+    ibrowse:set_max_sessions("localhost", "5984", 50),
     setup_mnesia(),
     RandomGeneratorSpec = {?RAND,
     			   {?RAND, start_link, []},

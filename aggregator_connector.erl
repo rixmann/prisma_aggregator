@@ -127,6 +127,7 @@ init([SubOrId]) ->
     Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
     ibrowse:set_max_pipeline_size(Host, Port, 1),
+    ibrowse:set_max_sessions(Host, Port, 20),
     prisma_statistics_server:subscription_add(),
     {ok, #state{subscription = Subscription,
 		callbacks = Callbacks}}.
