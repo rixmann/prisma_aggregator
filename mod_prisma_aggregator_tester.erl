@@ -242,11 +242,6 @@ send_subscriptions_bulk_file(Start, Count, Accessor, Batchname) ->
 	    "subscribeBulk",
 	    json_eep:term_to_json(SubList)).
 
-send_bulk_subscriptions(To, Subscriptions) ->
-    send_iq(get_sender(), 
-	    To,
-	    "subscribeBulk",
-	    json_eep:term_to_json(Subscriptions)).
 
 map_to_n_lines(Device,N, F) ->
     map_to_n_lines(Device, 1 , 1, N, F, []).
@@ -269,6 +264,12 @@ map_to_n_lines(Device, Start, Count, N, F, Acc) ->
 		    map_to_n_lines(Device, Start, Count + 1, N, F, Acc)
 	    end
     end.
+
+send_bulk_subscriptions(To, Subscriptions) ->
+    send_iq(get_sender(), 
+	    To,
+	    "subscribeBulk",
+	    json_eep:term_to_json(Subscriptions)).
 
 get_aggregator() ->
     [{aggregator, Ret}] = ets:lookup(?TCFG, aggregator),

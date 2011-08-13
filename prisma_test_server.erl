@@ -168,7 +168,7 @@ handle_cast({run_test, {overload, {{From, To}, StartTime, Count, Rate, Dev}}}, S
     ?INFO_MSG("vor map", []),
     Subs = map_to_n_lines(Dev, Count, Count , ExpectedMessages, F, []),
     ?INFO_MSG("nach map", []),
-    mod_prisma_aggregator_tester:send_iq(jlib:string_to_jid(From), Subs),
+    mod_prisma_aggregator_tester:send_bulk_subscriptions(jlib:string_to_jid(From), Subs),
     ?INFO_MSG("nach senden", []),
     agr:callbacktimer(100, {run_test, {overload, {{From, To}, StartTime, Count + MissingMessages, Rate, Dev}}}),
     ?INFO_MSG("nach callback", []),
