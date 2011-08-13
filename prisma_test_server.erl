@@ -162,7 +162,6 @@ handle_cast({run_test, {overload, {{From, To}, StartTime, Count, Rate, Dev}}}, S
     {Walltime, _} = statistics(wall_clock),
     ExpectedMessages = ((Walltime - StartTime) div 1000) * Rate,
     MissingMessages = ExpectedMessages - Count,
-    mod_prisma_aggregator_tester:send_subscriptions_bulk_file(Count, MissingMessages, "aggregatortester." ++ agr:config_read(host), "overload_and_recover"),
     F = fun(Line, N) ->
 		mod_prisma_aggregator_tester:subscription_from_line(Line, "aggregatortester." ++ agr:config_read(host), "overload_and_recover-" ++ integer_to_list(N + Count))
 	end,
