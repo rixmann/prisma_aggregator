@@ -144,8 +144,8 @@ handle_cast(overload, State) ->
     {noreply, State#state{test= recover}};
 
 handle_cast({run_test, {overload,  {{From, To}, _StartTime, Count, _Rate, Dev}}}, #state{test=recover} = State) ->
-    file:close(Dev),
     ?INFO_MSG("In run recover", []),
+    file:close(Dev),
     lists:map(fun(Num) ->
 		      mod_prisma_aggregator_tester:send_emigrate(From, To, "overload_and_recover-" ++ integer_to_list(Num))
 	      end,
@@ -158,20 +158,15 @@ handle_cast({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, State) ->
     {noreply, State};
 
 handle_cast({run_test, {overload, {{From, To}, StartTime, Count, Rate, Dev}}}, State) ->
-    ?INFO_MSG("In run overload", []),
     {Walltime, _} = statistics(wall_clock),
     ExpectedMessages = ((Walltime - StartTime) div 1000) * Rate,
     MissingMessages = ExpectedMessages - Count,
     F = fun(Line, N) ->
-		mod_prisma_aggregator_tester:subscription_from_line(Line, "aggregatortester." ++ agr:config_read(host), "overload_and_recover-" ++ integer_to_list(N + Count))
+		mod_prisma_aggregator_tester:subscription_from_line(Line, "aggregatortester." ++ agr:config_read(host), "overload_and_recover-" ++ integer_to_list(N))
 	end,
-    ?INFO_MSG("vor map", []),
     Subs = map_to_n_lines(Dev, Count, Count , ExpectedMessages, F, []),
-    ?INFO_MSG("nach map", []),
     mod_prisma_aggregator_tester:send_bulk_subscriptions(jlib:string_to_jid(From), Subs),
-    ?INFO_MSG("nach senden", []),
     agr:callbacktimer(100, {run_test, {overload, {{From, To}, StartTime, Count + MissingMessages, Rate, Dev}}}),
-    ?INFO_MSG("nach callback", []),
     {noreply, State#state{test=overload}};
 
 handle_cast(collect_stats, State = #state{device = Dev,
