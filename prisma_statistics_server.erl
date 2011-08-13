@@ -133,7 +133,6 @@ handle_cast(collect_stats, State = #state{device = Dev,
     Runque = statistics(run_queue),
     Runtime = RuntimeStart - Rto,
     Walltime = Walltime1970 - To,
-    
     RunqueTreshholdHit = (Runque > agr:config_read(overload_treshhold_runque)),
     {NewTreshholdTime, EMSentNew} = if RunqueTreshholdHit ->
 					    Window = agr:config_read(overload_treshhold_window),
@@ -171,7 +170,7 @@ handle_cast(collect_stats, State = #state{device = Dev,
 	       catch
 		   _:_ -> -1
 	       end,
-	      Walltime - NewTreshholdTime]),
+	      Walltime1970 - NewTreshholdTime]),
     agr:callbacktimer(1000, collect_stats),
     {noreply, State#state{proceeded_subs = 0,
 			  proceeded_subs_old = NPsubs,
