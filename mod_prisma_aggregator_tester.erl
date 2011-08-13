@@ -10,7 +10,9 @@
 -export([map_to_n_lines/3,
 	 create_json_subscription/4,
 	 send_iq/4,
-	 get_sender/0]).
+	 get_sender/0,
+	 send_subscriptions_bulk_file/4,
+	 send_emigrate/3]).
 -export([start/2, stop/1, route/3]).
 
 %% gen_mod implementation
@@ -97,7 +99,10 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		    send_emigrate(Source, Destination, Id);
 		"test " ++ Params ->
 		    {match, [Aggregator, URL]} = re:run(Params, "(?<Ag>.+) (?<Tn>.+)", [{capture, ['Ag', 'Tn'], list}]),
-		    prisma_test_server:start_test(Aggregator, URL)
+		    prisma_test_server:start_test(Aggregator, URL);
+		"overload_and_recover " ++ Params ->
+		    {match, [Source, Destination, Rate]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Rate>.+)", [{capture, ['From', 'To', 'Rate'], list}]),
+		    prisma_test_server:start_overload_and_recover(Source, Destination, integer_to_list(Rate))
 	    end;
 	"PrismaMessage" ->
 	    JSON = try
@@ -107,19 +112,10 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		   end,
 	    case JSON of
 		{[{<<"class">>,<<"de.prisma.datamodel.message.ErrorMessage">>},
-		  {<<"subscriptionID">>, SubId},
+		  {<<"subscriptionID">>, _SubId},
 		  {<<"errorType">>, _Type},
-		  {<<"errorDescription">>, _Desc}]} ->
-		    try
-			send_iq(get_sender(),
-				From,
-				"unsubscribe",
-				json_eep:term_to_json(binary_to_list(SubId))),
- 			prisma_test_server:error_received(JSON)
-		    catch
-			_ : _ -> fail %wegen binary to list
-		    end;
-	
+		  {<<"errorDescription">>, _Desc}]} -> prisma_test_server:error_received(JSON, From);
+
 		{[{<<"class">>,<<"de.prisma.datamodel.message.Message">>},
 		  {<<"id">>,null},
 		  {<<"messageID">>,null},
@@ -136,12 +132,13 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		  {<<"recipient">>,null},
 		  {<<"sender">>,null},
 		  {<<"subscriptionID">>,_SubId},
-		  {<<"title">>,null}]} -> 
-		    prisma_test_server:message_received(JSON);
-		_ -> 
-		    ok
-	    end
-    end,
+		  {<<"title">>,null}]} -> prisma_test_server:message_received(JSON);
+		
+		"overloaded" -> prisma_test_server:overload_received();
+		_ -> ok
+	    end;
+	_ -> ok
+    end,	
     ok;
 
 route(_,_,Packet) -> 

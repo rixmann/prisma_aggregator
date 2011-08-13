@@ -28,7 +28,9 @@
 		subscription_count = 0,
 		proceeded_subs,
 		proceeded_subs_old,
-		walltime_init}).
+		walltime_init,
+		last_time_runque_under_treshhold,
+		error_message_sent}).
 
 %%====================================================================
 %% API
@@ -78,7 +80,9 @@ init([]) ->
 		proceeded_subs_old = 0,
 		timestamp_offset = Walltime1970,
 		runtime_offset = RuntimeStart,
-		walltime_init = Walltime1970}}.
+		walltime_init = Walltime1970,
+		last_time_runque_under_treshhold = Walltime1970,
+		error_message_sent = false}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -121,18 +125,41 @@ handle_cast(collect_stats, State = #state{device = Dev,
 					  subscription_count = SubCnt,
 					  proceeded_subs = Psubs,
 					  proceeded_subs_old = Psubs_old,
-					  walltime_init = Walltime_init}) ->
+					  walltime_init = Walltime_init,
+					  last_time_runque_under_treshhold = OldTreshholdTime,
+					  error_message_sent = ErrorMessageSent}) ->
     {RuntimeStart, _} = statistics(runtime),
     {Walltime1970, _} = statistics(wall_clock),
+    Runque = statistics(run_queue),
     Runtime = RuntimeStart - Rto,
     Walltime = Walltime1970 - To,
+    
+    RunqueTreshholdHit = (Runque > agr:config_read(overload_treshhold_runque)),
+    {NewTreshholdTime, EMSentNew} = if RunqueTreshholdHit ->
+					    Window = agr:config_read(overload_treshhold_window),
+					    if ((Walltime - OldTreshholdTime)  > Window) ->
+						    if (not ErrorMessageSent) ->
+							    mod_prisma_aggregator:send_iq(agr:config_read(aggregator),
+											  agr:config_read(coordinator),
+											  "PrismaMessage",
+											  json_eep:term_to_json("overloaded")),
+							    {OldTreshholdTime, true};
+						       true -> 
+							    {OldTreshholdTime, true}
+						    end;
+					       true -> {OldTreshholdTime, false}
+					    end;
+				       true -> {Walltime, false}
+				    end,
+    
+    
     Nload = trunc(100 * Runtime / Walltime),
     Psubs_sec = trunc(Psubs / (Walltime / 1000)),
     NPsubs = trunc(Psubs_old * 0.9 + Psubs_sec * 0.1),
     io:format(Dev,                                    %add a line to runtimestats.dat
 	      "~-15w ~-15w ~-15w ~-15w ~-15w ~-15w ~15w~n",
 	      [trunc((Walltime1970 - Walltime_init) div 100),  %walltime in 10th of seconds
-	       statistics(run_queue),                 %processes ready to run	
+	       Runque,                 %processes ready to run	
 	       Nload,                                 %precent cpu usage 100% ~ 1 core
 	       if Httpc_overload -> 1;
 		  true -> 0
@@ -148,7 +175,9 @@ handle_cast(collect_stats, State = #state{device = Dev,
     {noreply, State#state{proceeded_subs = 0,
 			  proceeded_subs_old = NPsubs,
 			  timestamp_offset = Walltime1970,
-			  runtime_offset = RuntimeStart}};
+			  runtime_offset = RuntimeStart,
+			  last_time_runque_under_treshhold = NewTreshholdTime,
+			  error_message_sent = EMSentNew}};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.

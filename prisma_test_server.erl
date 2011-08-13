@@ -20,9 +20,11 @@
 	 terminate/2, code_change/3]).
 
 -export([message_received/1,
-	 error_received/1,
+	 error_received/2,
 	 start_test/2,
-	 stop_test/0]).
+	 stop_test/0,
+	 overload_received/0,
+	 start_overload_and_recover/3]).
 
 -record(state, {test, 
 		error_count, 
@@ -43,11 +45,18 @@ start_link() ->
 message_received(Message) ->
     gen_server:call(?MODULE, {message_received, Message}).
 
-error_received(Error) ->
-    gen_server:call(?MODULE, {error_received, Error}).
+error_received(Error, From) ->
+    gen_server:call(?MODULE, {error_received, {Error, From}}).
+
+overload_received() ->
+    gen_server:call(?MODULE, overload).
 
 start_test(Aggregator, Test) ->
     gen_server:call(?MODULE, {run_test, {Test, {Aggregator, 0}}}).
+
+start_overload_and_recover(From, To, Rate) ->
+    {Walltime, _} = statistics(wall_clock),
+    gen_server:call(?MODULE, {run_test, {overload, {{From, To}, Walltime, 0, Rate}}}).
 
 stop_test() ->
     gen_server:call(?MODULE, stop).
@@ -85,6 +94,29 @@ init([]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
+
+handle_call({recover, {{From, To}, _StartTime, Count, _Rate}}, _From, State) ->
+    lists:map(fun(Num) ->
+		      mod_prisma_aggregator_tester:send_emigrate(From, To, "overload_and_recover-" ++ integer_to_list(Num))
+	      end,
+	     lists:seq(Count div 2, Count, 1)),
+    {reply, ok, State};
+
+handle_call(overload, _From, State) ->
+    {reply, ok, State#state{test= recover}};
+
+handle_call({run_test, {overload, Params}}, _From, #state{test=recover} = State) ->
+    timer(1,{run_test, {recover, Params}}),
+    {reply, ok, State};
+
+handle_call({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, _From, State) ->
+    {Walltime, _} = statistics(wall_clock),
+    ExpectedMessages = ((Walltime - StartTime) div 1000) * Rate,
+    MissingMessages = ExpectedMessages - Count,
+    mod_prisma_aggregator_tester:send_subscriptions_bulk_file(Count, MissingMessages, "aggregatortester." ++ agr:config_read(host), "overload_and_recover"),
+    _Timer = timer(1, {run_test, {overload, {FromTo, StartTime, Count + MissingMessages, Rate}}}),
+    {reply, ok, State#state{test=overload}};
+
 handle_call({run_test, {Test, {Aggregator, Count}}}, _From, State) ->
     Subs = [mod_prisma_aggregator_tester:create_json_subscription("http://127.0.0.1:8000/index.yaws" ++ Test, 
 								  jlib:jid_to_string(mod_prisma_aggregator_tester:get_sender()), 
@@ -95,13 +127,24 @@ handle_call({run_test, {Test, {Aggregator, Count}}}, _From, State) ->
 					 jlib:string_to_jid(Aggregator),
 					 "subscribeBulk",
 					 json_eep:term_to_json(Subs)),
-    Timer = timer:apply_after(120000, gen_server, call, [?MODULE, {run_test, {Test, {Aggregator, Count + 1000}}}]),
+    timer(120000, {run_test, {Test, {Aggregator, Count + 1000}}}),
     ?INFO_MSG("Test: ~p Neue Nachrichten werden verschickt ~p", [Test, Count + 1000]),
-    {reply, ok, State#state{test=Timer}};
+    {reply, ok, State#state{test=continuous}};
 
 handle_call({message_received, _Message}, _From, State) ->
     {reply, ok, State#state{message_count = State#state.message_count + 1}};
-handle_call({error_received, _Error}, _From, State) ->
+
+handle_call({error_received, {Error, From}}, _From, State) ->
+    {[{<<"class">>,<<"de.prisma.datamodel.message.ErrorMessage">>},
+      {<<"subscriptionID">>, SubId}, _, _]} = Error,
+    try
+	mod_prisma_aggregator:send_iq(mod_prisma_aggregator_tester:get_sender(),
+				      jlib:string_to_jid(From),
+				      "unsubscribe",
+				      json_eep:term_to_json(binary_to_list(SubId)))
+    catch
+	_ : _ -> fail %wegen binary to list
+    end,
     {reply, ok, State#state{error_count = State#state.error_count + 1}};
 
 handle_call(stop, _From, State) ->
@@ -161,3 +204,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
+
+timer(Time, Params)-> 
+    timer:apply_after(Time, gen_server, call, [?MODULE, Params]).
