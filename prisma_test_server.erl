@@ -140,9 +140,11 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 
 handle_cast(overload, State) ->
+    ?INFO_MSG("In overload", []),
     {noreply, State#state{test= recover}};
 
 handle_cast({run_test, {overload,  {{From, To}, _StartTime, Count, _Rate}}}, #state{test=recover} = State) ->
+    ?INFO_MSG("In run overload", []),
     lists:map(fun(Num) ->
 		      mod_prisma_aggregator_tester:send_emigrate(From, To, "overload_and_recover-" ++ integer_to_list(Num))
 	      end,
@@ -150,6 +152,7 @@ handle_cast({run_test, {overload,  {{From, To}, _StartTime, Count, _Rate}}}, #st
     {noreply, State};
 
 handle_cast({run_test, {overload, {FromTo, StartTime, Count, Rate}}}, State) ->
+    ?INFO_MSG("In run recover", []),
     {Walltime, _} = statistics(wall_clock),
     ExpectedMessages = ((Walltime - StartTime) div 1000) * Rate,
     MissingMessages = ExpectedMessages - Count,
