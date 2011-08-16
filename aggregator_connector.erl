@@ -125,10 +125,7 @@ init([SubOrId]) ->
     {atomic, Subscription} = mnesia:transaction(F),
     agr:callbacktimer(random, go_get_messages, 1),
     Callbacks = ets:new(callbacks, []),
-    {Host, Port} = get_host_and_port_from_url(Subscript
-
-
-ion#subscription.url),
+    {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
     ibrowse:set_max_pipeline_size(Host, Port, 1),
     ibrowse:set_max_sessions(Host, Port, 2),
     prisma_statistics_server:subscription_add(),
