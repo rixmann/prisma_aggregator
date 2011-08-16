@@ -33,7 +33,7 @@ start(Host, Opts) ->
     ReadAndStoreConf(collect_stats, true),
     ibrowse:start(),
     ibrowse:set_max_pipeline_size("localhost", "5984", 1),
-    ibrowse:set_max_sessions("localhost", "5984", 50),
+    ibrowse:set_max_sessions("localhost", "5984", 10),
     setup_mnesia(),
     RandomGeneratorSpec = {?RAND,
     			   {?RAND, start_link, []},
