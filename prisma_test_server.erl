@@ -21,7 +21,7 @@
 
 -export([message_received/1,
 	 error_received/2,
-	 start_test/2,
+	 start_test/5,
 	 stop_test/0,
 	 overload_received/0,
 	 start_overload_and_recover/3]).
@@ -51,8 +51,8 @@ error_received(Error, From) ->
 overload_received() ->
     gen_server:cast(?MODULE, overload).
 
-start_test(Aggregator, Test) ->
-    gen_server:cast(?MODULE, {run_test, {Test, {Aggregator, 0}}}).
+start_test(Aggregator, Server, Params, Startport, PCount) ->
+    gen_server:cast(?MODULE, {run_test, {Aggregator, Server, Params, Startport, PCount}, 0}).
 
 start_overload_and_recover(From, To, Rate) ->
     {Walltime, _} = statistics(wall_clock),
@@ -106,19 +106,15 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-
-handle_cast({run_test, {Test, {Aggregator, Count}}}, State) ->
-    Subs = [mod_prisma_aggregator_tester:create_json_subscription(Test, 
+handle_cast({run_test, {Aggregator, Server, Params, Startport, PCount}, Count}, State) ->
+    Subs = [mod_prisma_aggregator_tester:create_json_subscription("http://" ++ Server ++ ":" ++ integer_to_list(Startport + (I div PCount)) ++ "/" ++ Params, 
 								  jlib:jid_to_string(mod_prisma_aggregator_tester:get_sender()), 
 								  "ATOM", 
 								  "test_hohes_1-" ++ integer_to_list(I)) 
 	    || I <- lists:seq(Count, Count + 1000)],
-    mod_prisma_aggregator_tester:send_iq(mod_prisma_aggregator_tester:get_sender(), 
-					 jlib:string_to_jid(Aggregator),
-					 "subscribeBulk",
-					 json_eep:term_to_json(Subs)),
-    agr:callbacktimer(120000, {run_test, {Test, {Aggregator, Count + 1000}}}),
-    ?INFO_MSG("Test: ~p Neue Nachrichten werden verschickt ~p", [Test, Count + 1000]),
+    agr:callbacktimer(120000, {run_test, {Aggregator, Server, Params, Startport, PCount}, Count + 1000}),
+    mod_prisma_aggregator_tester:send_bulk_subscriptions(jlib:string_to_jid(Aggregator), Subs),
+    ?INFO_MSG("Test: ~p Neue Nachrichten werden verschickt ~p", [Params, Count + 1000]),
     {noreply, State#state{test=continuous}};
 
 handle_cast({message_received, _Message}, State) ->
