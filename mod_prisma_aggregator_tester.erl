@@ -99,9 +99,9 @@ route(From, To, {xmlelement, "message", _, _} = Packet) ->
 		"emigrate " ++ Params ->
 		    {match, [Source, Destination, Id]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Id>.+)", [{capture, ['From', 'To', 'Id'], list}]),
 		    send_emigrate(Source, Destination, Id);
-		"test " ++ Params ->
+		"test " ++ Rest ->
 		    {match, [Aggregator, Server, Params, Startport, PCount]} = 
-			re:run(Params, "(?<Aggregator>.+) (?<Server>.+) (?<Params>.+) (?<StartPort>.+) (?<PCount>.+)", [{capture, ['Aggregator', 'Server', 'Params', 'StartPort', 'PCount'], list}]),
+			re:run(Rest, "(?<Aggregator>.+) (?<Server>.+) (?<Params>.+) (?<StartPort>.+) (?<PCount>.+)", [{capture, ['Aggregator', 'Server', 'Params', 'StartPort', 'PCount'], list}]),
 		    prisma_test_server:start_test(Aggregator, Server, Params, list_to_integer(Startport), list_to_integer(PCount));
 		"overload_and_recover " ++ Params ->
 		    {match, [Source, Destination, Rate]} = re:run(Params, "(?<From>.+) (?<To>.+) (?<Rate>.+)", [{capture, ['From', 'To', 'Rate'], list}]),
