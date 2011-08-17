@@ -21,7 +21,7 @@
 start(Host, Opts) ->
     MyHost = gen_mod:get_opt_host(Host, Opts, "aggregatortester.@HOST@"),
     ets:new(?TCFG, [named_table, protected, set, {keypos, 1}]),
-    ets:insert(?TCFG,{host, Host}),
+    agr:config_put(host, Host),
     Aggregator = proplists:get_value(aggregator, Opts),
     ets:insert(?TCFG, {aggregator, jlib:string_to_jid(Aggregator)}),
     ServSpec = {prisma_test_server,
@@ -181,7 +181,8 @@ send_iq(From, To, TypeStr, BodyStr) ->
 
 
 get_host() ->
-    [{host, Ret}] = ets:lookup(?TCFG, host),
+    %[{host, Ret}] = ets:lookup(?TCFG, host),
+    agr:config_read(host),
     Ret.
 
 
