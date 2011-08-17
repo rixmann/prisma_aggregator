@@ -126,8 +126,8 @@ init([SubOrId]) ->
     agr:callbacktimer(random, go_get_messages, 1),
     Callbacks = ets:new(callbacks, []),
     {Host, Port} = get_host_and_port_from_url(Subscription#subscription.url),
-    ibrowse:set_max_pipeline_size(Host, Port, 1),
-    ibrowse:set_max_sessions(Host, Port, 10),
+    ibrowse:set_max_pipeline_size(Host, Port, agr:config_read(ibrowse_max_pipeline_size)),
+    ibrowse:set_max_sessions(Host, Port, agr:config_read(ibrowse_max_sessions)),
     prisma_statistics_server:subscription_add(),
     {ok, #state{subscription = Subscription,
 		callbacks = Callbacks}}.
