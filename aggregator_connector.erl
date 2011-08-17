@@ -203,7 +203,7 @@ handle_cast(go_get_messages, State = #state{subscription = Sub}) ->
 						       -2,
 						       <<"Network error, connection failed">>),
 				   Sub),
-	    log("opening http connection failed on worker ~p for Error~n~p", [get_id(State), Error]),
+	    log("opening http connection failed on worker ~p for Error~n~p~nUrl:~p", [get_id(State), Error, Sub#subscription.url]),
 	    CallbackOnConfig(State);
 	{error, _Reason} ->
 	    message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
