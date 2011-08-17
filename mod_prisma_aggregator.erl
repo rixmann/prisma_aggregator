@@ -32,7 +32,7 @@ start(Host, Opts) ->
     ReadAndStoreConf(polling_retry_time_after_failure, never),
     ReadAndStoreConf(collect_stats, true),
     ReadAndStoreConf(ibrowse_max_pipeline_size, 1),
-    ReadAndStoreConf(ibrowse_max_sessions, 1),
+    ReadAndStoreConf(ibrowse_max_sessions, 10),
     ibrowse:start(),
     ibrowse:set_max_pipeline_size("localhost", "5984", 1),
     ibrowse:set_max_sessions("localhost", "5984", 10),
