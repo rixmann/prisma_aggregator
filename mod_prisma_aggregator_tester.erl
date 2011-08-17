@@ -182,8 +182,7 @@ send_iq(From, To, TypeStr, BodyStr) ->
 
 get_host() ->
     %[{host, Ret}] = ets:lookup(?TCFG, host),
-    agr:config_read(host),
-    Ret.
+    agr:config_read(host).
 
 
 create_json_subscription(Url, Accessor, SourceType, Id) ->
