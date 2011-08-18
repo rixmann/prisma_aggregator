@@ -262,7 +262,7 @@ handle_info({'EXIT', _Reason, normal}, State) -> %timer process died
 
 handle_info({Ref, {error, _}} = _F, State) ->
 						%Content = ets:foldl(fun(_El, Acc) -> Acc + 1 end, 0, get_callbacks(State)),
-						%log("handle info on ~p, error:~n~p anzahl callbacks:~n~p", [get_id(State), F, Content]),
+						log("handle info on ~p, error:~n~p", [get_id(State), _F]),
     
 						%ets:delete(get_callbacks(State), Ref),
     message_to_coordinator(create_prisma_error(list_to_binary(get_id(State)),
@@ -383,6 +383,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 							    -1,
 							    <<"Stream returned invalid XML">>),
 					Sub),
+		  log("Stream returned invalid XML on ~p", [Sub#subscription.id]),
 		  case agr:config_read(polling_retry_time_after_failure) of 
 		      never -> {stop, normal, State};
 		      _Val -> agr:callbacktimer(agr:config_read(polling_interval), go_get_messages),
@@ -420,7 +421,7 @@ handle_http_response(initial_get_stream, Body, State) ->
 		      agr:callbacktimer(agr:config_read(polling_interval), go_get_messages),
 		      {noreply, State#state{subscription = NSub}}
 		  catch
-		      _Arg : _Error -> %log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), Arg, Error]),
+		      _Arg : _Error -> log("Worker ~p caught error while trying to interpret xml.~n~p : ~p", [get_id(Sub), _Arg, _Error]),
 			  message_to_coordinator(create_prisma_error(list_to_binary(get_id(Sub)),
 								     -1,
 								     <<"Error while trying to interpret XML">>),
