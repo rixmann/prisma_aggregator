@@ -107,7 +107,7 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({run_test, {Aggregator, Server, Params, Startport, PCount}, Count}, State) ->
-    Subs = [mod_prisma_aggregator:send_subscription(Aggregator,
+    Subs = [mod_prisma_aggregator_tester:send_subscription(Aggregator,
 						    mod_prisma_aggregator_tester:create_json_subscription("http://" ++ Server ++ ":" ++ integer_to_list(Startport + (I rem PCount)) ++ "/" ++ Params, 
 								  jlib:jid_to_string(mod_prisma_aggregator_tester:get_sender()), 
 								  "ATOM", 
