@@ -114,7 +114,7 @@ handle_cast({run_test, {Aggregator, Server, Params, Startport, PCount}, Count}, 
 	    || I <- lists:seq(Count, Count + 1000)],
     agr:callbacktimer(120000, {run_test, {Aggregator, Server, Params, Startport, PCount}, Count + 1000}),
     mod_prisma_aggregator_tester:send_bulk_subscriptions(jlib:string_to_jid(Aggregator), Subs),
-    ?INFO_MSG("Test: ~p Neue Nachrichten werden verschickt ~p", [Params, Count + 1000]),
+    ?INFO_MSG("Test: ~p Neue Nachrichten wurden verschickt ~p, an ", [Params, Count + 1000, Aggregator]),
     {noreply, State#state{test=continuous}};
 
 handle_cast({message_received, _Message}, State) ->
