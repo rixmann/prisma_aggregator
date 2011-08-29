@@ -107,13 +107,14 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({run_test, {Aggregator, Server, Params, Startport, PCount}, Count}, State) ->
-    Subs = [mod_prisma_aggregator_tester:create_json_subscription("http://" ++ Server ++ ":" ++ integer_to_list(Startport + (I rem PCount)) ++ "/" ++ Params, 
+    Subs = [mod_prisma_aggregator:send_subscription(Aggregator,
+						    mod_prisma_aggregator_tester:create_json_subscription("http://" ++ Server ++ ":" ++ integer_to_list(Startport + (I rem PCount)) ++ "/" ++ Params, 
 								  jlib:jid_to_string(mod_prisma_aggregator_tester:get_sender()), 
 								  "ATOM", 
-								  "test_hohes_1-" ++ integer_to_list(I)) 
+								  "test_hohes_1-" ++ integer_to_list(I))) 
 	    || I <- lists:seq(Count, Count + 1000)],
     agr:callbacktimer(120000, {run_test, {Aggregator, Server, Params, Startport, PCount}, Count + 1000}),
-    mod_prisma_aggregator_tester:send_bulk_subscriptions(jlib:string_to_jid(Aggregator), Subs),
+%    mod_prisma_aggregator_tester:send_bulk_subscriptions(jlib:string_to_jid(Aggregator), Subs),
     ?INFO_MSG("Test: ~p Neue Nachrichten wurden verschickt ~p, an ~p", [Params, Count + 1000, Aggregator]),
     {noreply, State#state{test=continuous}};
 

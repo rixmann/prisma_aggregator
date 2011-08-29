@@ -14,6 +14,7 @@
 	 send_subscriptions_bulk_file/4,
 	 send_emigrate/3,
 	 send_bulk_subscriptions/2,
+	 send_subscription/2,
 	 subscription_from_line/3]).
 -export([start/2, stop/1, route/3]).
 
@@ -271,6 +272,12 @@ send_bulk_subscriptions(To, Subscriptions) ->
 	    To,
 	    "subscribeBulk",
 	    json_eep:term_to_json(Subscriptions)).
+
+send_subscription(To, Subscription) ->
+    send_iq(get_sender(), 
+	    To,
+	    "subscribe",
+	    json_eep:term_to_json(Subscription)).
 
 get_aggregator() ->
     [{aggregator, Ret}] = ets:lookup(?TCFG, aggregator),
