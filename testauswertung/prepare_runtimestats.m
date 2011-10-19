@@ -7,5 +7,4 @@ function NewMat = prepare_runtimestats(OldMat)
   NewMat = OldMat([i:end], :)';
   time_vector = NewMat([1], :) - time_offset;
   NewMat = [time_vector; NewMat([2:end], :)]';
-  return;
 endfunction
